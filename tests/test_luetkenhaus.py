@@ -2,7 +2,7 @@
 """
 
 import unittest
-from run_luetkenhaus_paper import run
+from run.run_luetkenhaus_paper import run
 import numpy as np
 
 class TestReproducabilityLuetkenhaus(unittest.TestCase):
