@@ -2,7 +2,7 @@ import os, sys; sys.path.insert(0, os.path.abspath("."))
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
-from run.run_whitepaper_nrp import available_params, future_params
+from scenarios.whitepaper.run_whitepaper_nrp import available_params, future_params
 from libs.aux_functions import binary_entropy
 
 L_ATT = 22
@@ -15,12 +15,12 @@ ms_available = [-p["T_DP"]*p["f_clock"]*np.log(2*0.95-1) for p in available_para
 ms_future = [-p["T_DP"]*p["f_clock"]*np.log(2*0.95-1) for p in future_params]  # #5000/200/0/500/50 for NV/Ca/Qdot/Rb/SiV (future values on the right).
 
 def ranger_E_num(off, p, T_0, t_coh):
-    q = 1 - p  
+    q = 1 - p
     j_arr = np.arange(off, m + 1, 16)
     E_num = np.sum(2 * p * q**j_arr / (2 - p) * np.exp(-j_arr * T_0 / t_coh))
     return E_num
 def ranger_E_den(off, p, *args):
-    q = 1 - p  
+    q = 1 - p
     j_arr = np.arange(off, m + 1, 16)
     E_num = np.sum(2 * p * q**j_arr / (2 - p))
     return E_num
@@ -45,11 +45,11 @@ def skr_whitepaper(L, m, params):
     if m > 10**6:
         offs = [(i, p, T_0, t_coh) for i in range(1,17)]
         with mp.Pool(mp.cpu_count()) as pool:
-            E_nums = pool.starmap(ranger_E_num, offs) 
+            E_nums = pool.starmap(ranger_E_num, offs)
             E_dens = pool.starmap(ranger_E_den, offs)
         E_num = np.sum(E_nums) + p_of_0
         E_den = np.sum(E_dens) + p_of_0
-    else:    
+    else:
         j_arr = np.arange(1, m + 1)
         E_num = np.sum(PofMisj_nn(j_arr) * np.exp(-j_arr * T_0 / t_coh)) + p_of_0
         E_den = np.sum(PofMisj_nn(j_arr)) + p_of_0

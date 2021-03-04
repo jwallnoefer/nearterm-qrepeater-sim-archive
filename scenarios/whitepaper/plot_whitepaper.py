@@ -1,7 +1,7 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import matplotlib.pyplot as plt
-from run.run_whitepaper_nsp import available_params, future_params, ms_available, ms_future
+from scenarios.whitepaper.run_whitepaper_nsp import available_params, future_params, ms_available, ms_future
 from libs.aux_functions import binary_entropy
 
 result_path = os.path.join("results", "whitepaper")

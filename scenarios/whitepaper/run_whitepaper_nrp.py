@@ -1,7 +1,7 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 from functools import reduce
 import multiprocessing as mp
-from scenarios.NRP_QR_cell import run
+from scenarios.whitepaper.NRP_QR_cell import run
 from libs.aux_functions import assert_dir, binary_entropy, calculate_keyrate_time, calculate_keyrate_channel_use
 import numpy as np
 import matplotlib.pyplot as plt
