@@ -14,13 +14,10 @@ def do_the_thing(length, max_iter, mode):
 
 if __name__ == "__main__":
     result_path = os.path.join("results", "luetkenhaus")
-    # length_list = np.linspace(0, 70e3, num=128)
-    length_list = np.linspace(0, 70e3, num=4)
+    length_list = np.linspace(0, 70e3, num=128)
     modes = ["seq", "sim"]
-    # num_processes = 32
-    num_processes = 2
-    # max_iter = 1e5
-    max_iter = 1e3
+    num_processes = 32
+    max_iter = 1e5
     res = {}
     start_time = time()
     with Pool(num_processes) as pool:
