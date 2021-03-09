@@ -1,8 +1,10 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 from scenarios.whitepaper.NSP_QR_cell import run
-from libs.aux_functions import assert_dir, binary_entropy, calculate_keyrate_time, calculate_keyrate_channel_use
+from libs.aux_functions import assert_dir, standard_bipartite_evaluation
 import numpy as np
-import matplotlib.pyplot as plt
+from multiprocessing import Pool
+from time import time
+import pandas as pd
 
 C = 2 * 10**8  # speed of light in optical fiber
 
@@ -46,95 +48,247 @@ ms_available = [25, 10, 0, 20, 100]  # # 25/20/0/100/10 for NV/Ca/Qdot/Rb/SiV (c
 ms_future = [5000, 50, 0, 200, 500]  # #5000/200/0/500/50 for NV/Ca/Qdot/Rb/SiV (future values on the right).
 
 
+def do_the_thing(length, max_iter, params, cutoff_time, mode="sim"):
+    p = run(length=length, max_iter=max_iter, params=params, cutoff_time=cutoff_time, mode=mode)
+    return p.data
+
 
 if __name__ == "__main__":
-    length_list = np.arange(25000, 425000, 25000)
-    # for name, params, m in zip(name_list, available_params, ms_available):
-    #     if name == "Qdot":
-    #         continue
-    #     print(name)
-    #     key_per_time_list = []
-    #     key_per_resource_list = []
-    #     for l in length_list:
-    #         print(l)
-    #         trial_time_manual = l / C
-    #         p = run(length=l, max_iter=10000, params=params, cutoff_time=m*trial_time_manual + 10**-6*trial_time_manual, mode="sim")
-    #         key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, 1, p.world.event_queue.current_time + 2 * l / C)
-    #         key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, 1, p.resource_cost_max_list)
-    #         key_per_time_list += [key_per_time]
-    #         key_per_resource_list += [key_per_resource]
-    #         if (10 * np.log10(key_per_resource / 2)) < (-60):
-    #             break
-    #     path = os.path.join(result_path, "available", name)
-    #     assert_dir(path)
-    #     np.savetxt(os.path.join(path, "length_list.txt"), length_list[:len(key_per_resource_list)])
-    #     np.savetxt(os.path.join(path, "key_per_time_list.txt"), key_per_time_list)
-    #     np.savetxt(os.path.join(path, "key_per_resource_list.txt"), key_per_resource_list)
-    for name, params, m in zip(name_list, future_params, ms_future):
-        if name == "Qdot":
-            continue
-        print(name)
-        key_per_time_list = []
-        key_per_resource_list = []
-        for l in length_list:
-            print(l)
-            trial_time_manual = l / C
-            p = run(length=l, max_iter=10000, params=params, cutoff_time=m*trial_time_manual + 10**-6*trial_time_manual, mode="sim")
-            key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, 1, p.world.event_queue.current_time + 2 * l / C)
-            key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, 1, p.resource_cost_max_list)
-            key_per_time_list += [key_per_time]
-            key_per_resource_list += [key_per_resource]
-            if (10 * np.log10(key_per_resource / 2)) < (-60):
-                break
-        path = os.path.join(result_path, "future", name)
-        assert_dir(path)
-        np.savetxt(os.path.join(path, "length_list.txt"), length_list[:len(key_per_resource_list)])
-        np.savetxt(os.path.join(path, "key_per_time_list.txt"), key_per_time_list)
-        np.savetxt(os.path.join(path, "key_per_resource_list.txt"), key_per_resource_list)
-    # ### here we plot the Rb lines for different cut-off times
-    # name = "Rb"
-    # params = params_available_Rb
-    # length_list = np.arange(25000, 425000, 25000)
-    # for m in [200, 500, 1000, 2000, 5000, 10000, 20000]:
-    #     print("m=%d" % m)
-    #     key_per_time_list = []
-    #     key_per_resource_list = []
-    #     for l in length_list:
-    #         print(l)
-    #         trial_time_manual = l / C
-    #         p = run(length=l, max_iter=10000, params=params, cutoff_time=m*trial_time_manual + 10**-6*trial_time_manual, mode="sim")
-    #         key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, 1, p.world.event_queue.current_time + 2 * l / C)
-    #         key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, 1, p.resource_cost_max_list)
-    #         key_per_time_list += [key_per_time]
-    #         key_per_resource_list += [key_per_resource]
-    #     path = os.path.join(result_path, "available", "m_test", name)
-    #     assert_dir(path)
-    #     np.savetxt(os.path.join(path, "length_list_%d.txt" % m), length_list)
-    #     np.savetxt(os.path.join(path, "key_per_time_list_%d.txt" % m), key_per_time_list)
-    #     np.savetxt(os.path.join(path, "key_per_resource_list_%d.txt" % m), key_per_resource_list)
+    mode = "sim"
+    if int(sys.argv[1]) == 0:  # available_params without cutoff
+        length_list = np.linspace(0, 425000, num=128)
+        num_processes = 32
+        max_iter = 1e5
+        res = {}
+        start_time = time()
+        with Pool(num_processes) as pool:
+            for name, params in zip(name_list, available_params):
+                if name == "Qdot":
+                    continue
+                num_calls = len(length_list)
+                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, [None] * num_calls, [mode] * num_calls)
+                res[name] = pool.starmap_async(do_the_thing, aux_list)
+            pool.close()
 
-    # # ### further investigate cutoff times - especially the claim that you can set it too low
-    # # ### effect should be very visible if memory quality is very high
-    # test_params = {"P_LINK": 10 * 10**-2,
-    #                "T_DP": 1}
-    # length = 22 * 10**3
-    # trial_time_manual = length / C
-    # m_list = [m for m in range(1, 41, 2)]
-    # cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
-    # key_per_time_list = []
-    # key_per_resource_list = []
-    # for m, cutoff_time in zip(m_list, cutoff_list):
-    #     print(m)
-    #     p = run(length=length, max_iter=10000, params=test_params, cutoff_time=cutoff_time, mode="sim")
-    #     key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, 1, p.world.event_queue.current_time + 2 * length / C)
-    #     key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, 1, p.resource_cost_max_list)
-    #     key_per_time_list += [key_per_time]
-    #     key_per_resource_list += [key_per_resource]
-    # path = os.path.join(result_path, "cutoff_test")
-    # assert_dir(path)
-    # np.savetxt(os.path.join(path, "m_list.txt"), m_list)
-    # np.savetxt(os.path.join(path, "key_per_time_list.txt"), key_per_time_list)
-    # np.savetxt(os.path.join(path, "key_per_resource_list.txt"), key_per_resource_list)
-    # plt.plot(m_list, key_per_resource_list)
-    # plt.grid()
-    # plt.show()
+            for name, params in zip(name_list, available_params):
+                if name == "Qdot":
+                    continue
+                data_series = pd.Series(data=res[name].get(), index=length_list)
+                print("available_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
+                output_path = os.path.join(result_path, "available", "no_cutoff", name)
+                assert_dir(output_path)
+                try:
+                    existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+                    combined_series = existing_series.append(data_series)
+                    combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                except FileNotFoundError:
+                    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                try:
+                    existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+                    combined_data = pd.concat([existing_data, output_data])
+                    combined_data.to_csv(os.path.join(output_path, "result.csv"))
+                except FileNotFoundError:
+                    output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
+
+    elif int(sys.argv[1]) == 1:  # available_params with cutoff
+        length_list = np.linspace(0, 425000, num=128)
+        num_processes = 32
+        max_iter = 1e5
+        res = {}
+        start_time = time()
+        with Pool(num_processes) as pool:
+            for name, params, m in zip(name_list, available_params, ms_available):
+                if name == "Qdot":
+                    continue
+                trial_times = length_list / C
+                cutoff_times = m * trial_times + 1e-6 * trial_times  # small buffer to make sure simultaneous events are not discarded because of floating point issues
+                num_calls = len(length_list)
+                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
+                res[name] = pool.starmap_async(do_the_thing, aux_list)
+            pool.close()
+
+            for name, params, m in zip(name_list, available_params, ms_available):
+                if name == "Qdot":
+                    continue
+                data_series = pd.Series(data=res[name].get(), index=length_list)
+                print("available_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
+                output_path = os.path.join(result_path, "available", "with_cutoff", name)
+                assert_dir(output_path)
+                try:
+                    existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+                    combined_series = existing_series.append(data_series)
+                    combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                except FileNotFoundError:
+                    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                try:
+                    existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+                    combined_data = pd.concat([existing_data, output_data])
+                    combined_data.to_csv(os.path.join(output_path, "result.csv"))
+                except FileNotFoundError:
+                    output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
+
+    elif int(sys.argv[1]) == 2:  # future_params without cutoff
+        length_list = np.linspace(0, 425000, num=128)
+        num_processes = 32
+        max_iter = 1e5
+        res = {}
+        start_time = time()
+        with Pool(num_processes) as pool:
+            for name, params in zip(name_list, future_params):
+                if name == "Qdot":
+                    continue
+                num_calls = len(length_list)
+                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, [None] * num_calls, [mode] * num_calls)
+                res[name] = pool.starmap_async(do_the_thing, aux_list)
+            pool.close()
+
+            for name, params in zip(name_list, future_params):
+                if name == "Qdot":
+                    continue
+                data_series = pd.Series(data=res[name].get(), index=length_list)
+                print("future_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
+                output_path = os.path.join(result_path, "future", "no_cutoff", name)
+                assert_dir(output_path)
+                try:
+                    existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+                    combined_series = existing_series.append(data_series)
+                    combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                except FileNotFoundError:
+                    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                try:
+                    existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+                    combined_data = pd.concat([existing_data, output_data])
+                    combined_data.to_csv(os.path.join(output_path, "result.csv"))
+                except FileNotFoundError:
+                    output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
+
+    elif int(sys.argv[1]) == 3:  # future_params with cutoff
+        length_list = np.linspace(0, 425000, num=128)
+        num_processes = 32
+        max_iter = 1e5
+        res = {}
+        start_time = time()
+        with Pool(num_processes) as pool:
+            for name, params, m in zip(name_list, future_params, ms_future):
+                if name == "Qdot":
+                    continue
+                trial_times = length_list / C
+                cutoff_times = m * trial_times + 1e-6 * trial_times  # small buffer to make sure simultaneous events are not discarded because of floating point issues
+                num_calls = len(length_list)
+                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
+                res[name] = pool.starmap_async(do_the_thing, aux_list)
+            pool.close()
+
+            for name, params, m in zip(name_list, future_params, ms_future):
+                if name == "Qdot":
+                    continue
+                data_series = pd.Series(data=res[name].get(), index=length_list)
+                print("future_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
+                output_path = os.path.join(result_path, "future", "with_cutoff", name)
+                assert_dir(output_path)
+                try:
+                    existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+                    combined_series = existing_series.append(data_series)
+                    combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                except FileNotFoundError:
+                    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                try:
+                    existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+                    combined_data = pd.concat([existing_data, output_data])
+                    combined_data.to_csv(os.path.join(output_path, "result.csv"))
+                except FileNotFoundError:
+                    output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
+
+    elif int(sys.argv[1]) == 4:  # investigate different cutoff times for Rb
+        name = "Rb"
+        params = params_available_Rb
+        length_list = np.linspace(0, 425000, num=128)
+        ms = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+        num_processes = 32
+        max_iter = 1e5
+        res = {}
+        start_time = time()
+        with Pool(num_processes) as pool:
+            for m in ms:
+                trial_times = length_list / C
+                cutoff_times = m * trial_times + 1e-6 * trial_times  # small buffer to make sure simultaneous events are not discarded because of floating point issues
+                num_calls = len(length_list)
+                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
+                res[m] = pool.starmap_async(do_the_thing, aux_list)
+            pool.close()
+
+            for m in ms:
+                data_series = pd.Series(data=res[m].get(), index=length_list)
+                print("m=%s finished after %.2f minutes." % (str(m), (time() - start_time) / 60.0))
+                output_path = os.path.join(result_path, f"{name}_m_test", f"m_{m}")
+                assert_dir(output_path)
+                try:
+                    existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+                    combined_series = existing_series.append(data_series)
+                    combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                except FileNotFoundError:
+                    data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+                result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                try:
+                    existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+                    combined_data = pd.concat([existing_data, output_data])
+                    combined_data.to_csv(os.path.join(output_path, "result.csv"))
+                except FileNotFoundError:
+                    output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
+
+    elif int(sys.argv[1]) == 5:  # investigate claim that one can set cutoff too low
+        # the effect should be most visible if memory quality is high and link quality is low
+        test_params = {"P_LINK": 10 * 10**-2,
+                       "T_DP": 1}
+        length = 22e3  # fixed length
+        trial_time_manual = length / C
+        m_list = np.arange(1, 65, 2)
+        cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
+        num_processes = 32
+        max_iter = 1e5
+        start_time = time()
+        with Pool(num_processes) as pool:
+            num_calls = len(m_list)
+            aux_list = zip([length] * num_calls, [max_iter] * num_calls, [test_params] * num_calls, cutoff_list, [mode] * num_calls)
+            res = pool.starmap(do_the_thing, aux_list)
+            pool.close()
+            pool.join()
+
+        data_series = pd.Series(data=res, index=m_list)
+        output_path = os.path.join(result_path, "cutoff_test")
+        assert_dir(output_path)
+        try:
+            existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+            combined_series = existing_series.append(data_series)
+            combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+        except FileNotFoundError:
+            data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+        result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+        output_data = pd.DataFrame(data=result_list, index=m_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+        try:
+            existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+            combined_data = pd.concat([existing_data, output_data])
+            combined_data.to_csv(os.path.join(output_path, "result.csv"))
+        except FileNotFoundError:
+            output_data.to_csv(os.path.join(output_path, "result.csv"))
+
+        print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
