@@ -108,9 +108,9 @@ class NSPProtocol(TwoLinkProtocol):
             if num_right_pairs == 0 and num_right_pairs_scheduled == 0:
                 self.source_B.schedule_event()
         elif self.mode == "seq":
-            if not pairs and num_left_pairs_scheduled == 0 and num_right_pairs == 0:
+            if not pairs and num_left_pairs_scheduled == 0 and num_right_pairs_scheduled == 0:
                 self.source_A.schedule_event()
-            elif num_left_pairs == 1 and not num_right_pairs == 0 and num_right_pairs_scheduled == 0:
+            elif num_left_pairs == 1 and num_right_pairs == 0 and num_right_pairs_scheduled == 0:
                 self.source_B.schedule_event()
             elif num_right_pairs == 1 and num_left_pairs == 0 and num_left_pairs_scheduled == 0:  # this might happen if left pair is discarded
                 self.source_A.schedule_event()
