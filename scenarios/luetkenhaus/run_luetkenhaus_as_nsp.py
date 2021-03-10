@@ -1,8 +1,10 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 from scenarios.whitepaper.NSP_QR_cell import run
-from libs.aux_functions import assert_dir, binary_entropy, calculate_keyrate_time, calculate_keyrate_channel_use
+from libs.aux_functions import assert_dir, standard_bipartite_evaluation
 import numpy as np
-import matplotlib.pyplot as plt
+from multiprocessing import Pool
+import pandas as pd
+from time import time
 
 ETA_P = 0.66  # preparation efficiency
 T_P = 2 * 10**-6  # preparation time
@@ -16,8 +18,8 @@ LAMBDA_BSM = 0.97  # BSM ideality parameter
 F = 1.16  # error correction inefficiency
 ETA_TOT = ETA_P * ETA_C * ETA_D
 
-C = 2 * 10**8 # speed of light in optical fiber
-result_path = os.path.join("results", "luetkenhaus_as_nsp")
+C = 2 * 10**8  # speed of light in optical fiber
+result_path = os.path.join("results", "luetkenhaus", "as_nsp")
 
 luetkenhaus_params = {"P_LINK": ETA_TOT,
                       "T_P": T_P,
@@ -27,33 +29,40 @@ luetkenhaus_params = {"P_LINK": ETA_TOT,
                       "LAMBDA_BSM": LAMBDA_BSM}
 
 
+def do_the_thing(length, max_iter, params, cutoff_time, mode="sim"):
+    p = run(length=length, max_iter=max_iter, params=params, cutoff_time=cutoff_time, mode=mode)
+    return p.data
+
+
 if __name__ == "__main__":
-    length_list = np.concatenate([np.arange(1000, 61000, 2500), np.arange(61000, 69000, 1000)])
-    mode="seq"
-    key_per_time_list = []
-    key_per_resource_list = []
-    for l in length_list:
-        print(l)
-        p = run(length=l, max_iter=10000, params=luetkenhaus_params, mode=mode)
-        key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, F, p.world.event_queue.current_time + 2 * l / C)
-        key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, F, p.resource_cost_max_list)
+    length_list = np.linspace(0, 70e3, num=128)
+    mode = "seq"
+    num_processes = 32
+    max_iter = 1e5
+    start_time = time()
+    with Pool(num_processes) as pool:
+        num_calls = len(length_list)
+        aux_list = zip(length_list, [max_iter] * num_calls, [luetkenhaus_params] * num_calls, [None] * num_calls, [mode] * num_calls)
+        res = pool.starmap(do_the_thing, aux_list)
+        pool.close()
+        pool.join()
 
-        key_per_time_list += [key_per_time]
-        key_per_resource_list += [key_per_resource]
+    data_series = pd.Series(data=res, index=length_list)
+    output_path = result_path
+    assert_dir(output_path)
+    try:
+        existing_series = pd.read_pickle(os.path.join(output_path, "raw_data.bz2"))
+        combined_series = existing_series.append(data_series)
+        combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+    except FileNotFoundError:
+        data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+    result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+    output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+    try:
+        existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+        combined_data = pd.concat([existing_data, output_data])
+        combined_data.to_csv(os.path.join(output_path, "result.csv"))
+    except FileNotFoundError:
+        output_data.to_csv(os.path.join(output_path, "result.csv"))
 
-    assert_dir(result_path)
-    np.savetxt(os.path.join(result_path, "length_list_%s.txt" % mode), length_list)
-    np.savetxt(os.path.join(result_path, "key_per_time_list_%s.txt" % mode), key_per_time_list)
-    np.savetxt(os.path.join(result_path, "key_per_resource_list_%s.txt" % mode), key_per_resource_list)
-
-    plt.plot(length_list, key_per_time_list)
-    plt.yscale("log")
-    plt.xlabel("total length")
-    plt.ylabel("key_rate_per_time")
-    plt.show()
-
-    plt.plot(length_list, key_per_resource_list)
-    plt.yscale("log")
-    plt.xlabel("total length")
-    plt.ylabel("key rate per channel use")
-    plt.show()
+    print("The whole run took %.2f minutes." % ((time() - start_time) / 60.0))
