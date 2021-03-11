@@ -56,7 +56,7 @@ if __name__ == "__main__":
         combined_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
     except FileNotFoundError:
         data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
-    result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
+    result_list = [standard_bipartite_evaluation(data_frame=df, err_corr_ineff=F) for df in data_series]
     output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
     try:
         existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
