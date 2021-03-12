@@ -96,6 +96,8 @@ if __name__ == "__main__":
 
     elif int(sys.argv[1]) == 1:  # available_params with cutoff
         length_list = np.linspace(0, 425000, num=128)
+        # looks like full range of lengths is not feasible for bad parameters
+        length_cutoffs = {"NV": 200e3, "SiV": 125e3, "Ca": 300e3, "Rb": 350e3}
         num_processes = 32
         max_iter = 1e5
         res = {}
@@ -104,10 +106,11 @@ if __name__ == "__main__":
             for name, params, m in zip(name_list, available_params, ms_available):
                 if name == "Qdot":
                     continue
-                trial_times = length_list / C
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                trial_times = shortened_length_list / C
                 cutoff_times = m * trial_times + 1e-6 * trial_times  # small buffer to make sure simultaneous events are not discarded because of floating point issues
-                num_calls = len(length_list)
-                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
+                num_calls = len(shortened_length_list)
+                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
                 res[name] = pool.starmap_async(do_the_thing, aux_list)
             pool.close()
 
