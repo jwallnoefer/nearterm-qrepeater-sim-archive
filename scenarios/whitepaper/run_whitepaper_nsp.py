@@ -117,7 +117,8 @@ if __name__ == "__main__":
             for name, params, m in zip(name_list, available_params, ms_available):
                 if name == "Qdot":
                     continue
-                data_series = pd.Series(data=res[name].get(), index=length_list)
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                data_series = pd.Series(data=res[name].get(), index=shortened_length_list)
                 print("available_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
                 output_path = os.path.join(result_path, "available", "with_cutoff", name)
                 assert_dir(output_path)
@@ -128,7 +129,7 @@ if __name__ == "__main__":
                 except FileNotFoundError:
                     data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
                 result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
-                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                output_data = pd.DataFrame(data=result_list, index=shortened_length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
                 try:
                     existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
                     combined_data = pd.concat([existing_data, output_data])
