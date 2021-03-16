@@ -54,7 +54,7 @@ for m in ms:
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
-    plt.scatter(x, y, label="m=%d" % m)
+    plt.scatter(x, y, marker="o", s=5, label="m=%d" % m)
     y_whitepaper = db([skr_whitepaper(l, m) / 2 for l in (x_base * 1000)])
     plt.plot(x_base, y_whitepaper)
 plt.xlim((0, 400))
@@ -63,7 +63,7 @@ plt.legend()
 plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
-plt.savefig(os.path.join(path, "m_compare.png"))
+plt.savefig(os.path.join(result_path, "Rb_m_test", "m_compare.png"))
 plt.show()
 
 # now do the plot where we see that one can set cutoff too low

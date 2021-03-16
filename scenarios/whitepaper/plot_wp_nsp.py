@@ -58,7 +58,7 @@ plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
 plt.plot(x_base, y_realistic_repeaterless1, color="black", linestyle="dashed")
 plt.plot(x_base, y_realistic_repeaterless2, color="black", linestyle="dashed")
 for name, color in zip(name_list, color_list):
-    path = os.path.join(result_path, "available", name)
+    path = os.path.join(result_path, "available", "no_cutoff", name)
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
@@ -72,8 +72,8 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Available parameters")
-plt.savefig(os.path.join(result_path, "available", "simulation.png"))
-plt.savefig(os.path.join(result_path, "available", "simulation.pdf"))
+plt.savefig(os.path.join(result_path, "available", "no_cutoff.png"))
+# plt.savefig(os.path.join(result_path, "available", "no_cutoff.pdf"))
 plt.show()
 
 # now plot future values
@@ -83,7 +83,7 @@ plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
 plt.plot(x_base, y_realistic_repeaterless1, color="black", linestyle="dashed")
 plt.plot(x_base, y_realistic_repeaterless2, color="black", linestyle="dashed")
 for name, color in zip(name_list, color_list):
-    path = os.path.join(result_path, "future", name)
+    path = os.path.join(result_path, "future", "no_cutoff", name)
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
@@ -97,8 +97,8 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Future parameters")
-plt.savefig(os.path.join(result_path, "future", "simulation.png"))
-plt.savefig(os.path.join(result_path, "future", "simulation.pdf"))
+plt.savefig(os.path.join(result_path, "future", "no_cutoff.png"))
+# plt.savefig(os.path.join(result_path, "future", "no_cutoff.pdf"))
 plt.show()
 
 
@@ -111,7 +111,7 @@ plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
 plt.plot(x_base, y_realistic_repeaterless1, color="black", linestyle="dashed")
 plt.plot(x_base, y_realistic_repeaterless2, color="black", linestyle="dashed")
 for name, color, params, m in zip(name_list, color_list, available_params, ms_available):
-    path = os.path.join(result_path, "available", name)
+    path = os.path.join(result_path, "available", "with_cutoff", name)
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
@@ -128,7 +128,7 @@ plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Available parameters")
 plt.savefig(os.path.join(result_path, "available", "compare.png"))
-plt.savefig(os.path.join(result_path, "available", "compare.pdf"))
+# plt.savefig(os.path.join(result_path, "available", "compare.pdf"))
 plt.show()
 
 # now plot future values
@@ -138,7 +138,7 @@ plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
 plt.plot(x_base, y_realistic_repeaterless1, color="black", linestyle="dashed")
 plt.plot(x_base, y_realistic_repeaterless2, color="black", linestyle="dashed")
 for name, color, params, m in zip(name_list, color_list, future_params, ms_future):
-    path = os.path.join(result_path, "future", name)
+    path = os.path.join(result_path, "future", "with_cutoff", name)
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
@@ -155,5 +155,5 @@ plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Future parameters")
 plt.savefig(os.path.join(result_path, "future", "compare.png"))
-plt.savefig(os.path.join(result_path, "future", "compare.pdf"))
+# plt.savefig(os.path.join(result_path, "future", "compare.pdf"))
 plt.show()
