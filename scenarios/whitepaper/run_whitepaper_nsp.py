@@ -265,7 +265,7 @@ if __name__ == "__main__":
                        "T_DP": 1}
         length = 22e3  # fixed length
         trial_time_manual = length / C
-        m_list = np.arange(1, 65, 2)
+        m_list = np.arange(1, 258, 2)
         cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
         num_processes = 32
         max_iter = 1e5
