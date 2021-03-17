@@ -262,10 +262,11 @@ if __name__ == "__main__":
     elif int(sys.argv[1]) == 5:  # investigate claim that one can set cutoff too low
         # the effect should be most visible if memory quality is high and link quality is low
         test_params = {"P_LINK": 10 * 10**-2,
-                       "T_DP": 1}
-        length = 22e3  # fixed length
+                       "T_DP": 0.5}
+        length = 200e3  # fixed length
         trial_time_manual = length / C
-        m_list = np.arange(1, 258, 2)
+        # m_list = np.arange(1, 258, 2)
+        m_list = np.arange(1, 4002, 25)
         cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
         num_processes = 32
         max_iter = 1e5

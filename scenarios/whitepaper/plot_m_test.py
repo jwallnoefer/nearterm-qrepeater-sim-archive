@@ -69,9 +69,9 @@ plt.show()
 # now do the plot where we see that one can set cutoff too low
 path = os.path.join(result_path, "cutoff_test")
 df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
-x = df.index / 1000
+x = df.index
 y = db(df["key_per_resource"] / 2)
-plt.scatter(x, y)
+plt.scatter(x, y, marker="o", s=5)
 plt.grid()
 plt.xlabel("cutoff_m")
 plt.ylabel("secret key rate per channel use [dB]")
