@@ -96,6 +96,8 @@ if __name__ == "__main__":
 
     elif int(sys.argv[1]) == 1:  # available_params with cutoff
         length_list = np.linspace(0, 425000, num=128)
+        # looks like full range of lengths is not feasible for bad parameters
+        length_cutoffs = {"NV": 200e3, "SiV": 125e3, "Ca": 300e3, "Rb": 350e3}
         num_processes = 32
         max_iter = 1e5
         res = {}
@@ -104,17 +106,19 @@ if __name__ == "__main__":
             for name, params, m in zip(name_list, available_params, ms_available):
                 if name == "Qdot":
                     continue
-                trial_times = length_list / C
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                trial_times = shortened_length_list / C
                 cutoff_times = m * trial_times + 1e-6 * trial_times  # small buffer to make sure simultaneous events are not discarded because of floating point issues
-                num_calls = len(length_list)
-                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
+                num_calls = len(shortened_length_list)
+                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, cutoff_times, [mode] * num_calls)
                 res[name] = pool.starmap_async(do_the_thing, aux_list)
             pool.close()
 
             for name, params, m in zip(name_list, available_params, ms_available):
                 if name == "Qdot":
                     continue
-                data_series = pd.Series(data=res[name].get(), index=length_list)
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                data_series = pd.Series(data=res[name].get(), index=shortened_length_list)
                 print("available_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
                 output_path = os.path.join(result_path, "available", "with_cutoff", name)
                 assert_dir(output_path)
@@ -125,7 +129,7 @@ if __name__ == "__main__":
                 except FileNotFoundError:
                     data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
                 result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
-                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                output_data = pd.DataFrame(data=result_list, index=shortened_length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
                 try:
                     existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
                     combined_data = pd.concat([existing_data, output_data])
@@ -258,10 +262,11 @@ if __name__ == "__main__":
     elif int(sys.argv[1]) == 5:  # investigate claim that one can set cutoff too low
         # the effect should be most visible if memory quality is high and link quality is low
         test_params = {"P_LINK": 10 * 10**-2,
-                       "T_DP": 1}
-        length = 22e3  # fixed length
+                       "T_DP": 0.5}
+        length = 200e3  # fixed length
         trial_time_manual = length / C
-        m_list = np.arange(1, 65, 2)
+        # m_list = np.arange(1, 258, 2)
+        m_list = np.arange(1, 4002, 25)
         cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
         num_processes = 32
         max_iter = 1e5
