@@ -1,5 +1,5 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
-from scenarios.whitepaper.NSP_QR_cell import run
+from scenarios.whitepaper.NSP_QR_cell_timeslots import run
 from libs.aux_functions import assert_dir, standard_bipartite_evaluation
 import numpy as np
 from multiprocessing import Pool
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     mode = "sim"
     if int(sys.argv[1]) == 0:  # available_params without cutoff
         length_list = np.linspace(0, 425000, num=128)
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
         max_iter = 1e5
         res = {}
         start_time = time()
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         length_list = np.linspace(0, 425000, num=128)
         # looks like full range of lengths is not feasible for bad parameters
         length_cutoffs = {"NV": 200e3, "SiV": 125e3, "Qdot": 100e3, "Ca": 300e3, "Rb": 350e3}
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
         max_iter = 1e5
         res = {}
         start_time = time()
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     elif int(sys.argv[1]) == 2:  # future_params without cutoff
         length_list = np.linspace(0, 425000, num=128)
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
         max_iter = 1e5
         res = {}
         start_time = time()
@@ -167,20 +167,23 @@ if __name__ == "__main__":
 
     elif int(sys.argv[1]) == 3:  # future_params with cutoff
         length_list = np.linspace(0, 425000, num=128)
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
+        length_cutoffs = {"NV": 425000, "SiV": 425000, "Qdot": 150e3, "Ca": 425000, "Rb": 425000}
         max_iter = 1e5
         res = {}
         start_time = time()
         with Pool(num_processes) as pool:
             for name, params, m in zip(name_list, future_params, ms_future):
-                trial_times = length_list / C
-                num_calls = len(length_list)
-                aux_list = zip(length_list, [max_iter] * num_calls, [params] * num_calls, [m] * num_calls, [mode] * num_calls)
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                trial_times = shortened_length_list / C
+                num_calls = len(shortened_length_list)
+                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, [m] * num_calls, [mode] * num_calls)
                 res[name] = pool.starmap_async(do_the_thing, aux_list)
             pool.close()
 
             for name, params, m in zip(name_list, future_params, ms_future):
-                data_series = pd.Series(data=res[name].get(), index=length_list)
+                shortened_length_list = length_list[length_list <= length_cutoffs[name]]
+                data_series = pd.Series(data=res[name].get(), index=shortened_length_list)
                 print("future_%s finished after %.2f minutes." % (str(name), (time() - start_time) / 60.0))
                 output_path = os.path.join(result_path, "future", "with_cutoff", name)
                 assert_dir(output_path)
@@ -191,7 +194,7 @@ if __name__ == "__main__":
                 except FileNotFoundError:
                     data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
                 result_list = [standard_bipartite_evaluation(data_frame=df) for df in data_series]
-                output_data = pd.DataFrame(data=result_list, index=length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
+                output_data = pd.DataFrame(data=result_list, index=shortened_length_list, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
                 try:
                     existing_data = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
                     combined_data = pd.concat([existing_data, output_data])
@@ -206,7 +209,7 @@ if __name__ == "__main__":
         params = params_available_Rb
         length_list = np.linspace(0, 425000, num=128)
         ms = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
         max_iter = 1e5
         res = {}
         start_time = time()
@@ -249,7 +252,7 @@ if __name__ == "__main__":
         # m_list = np.arange(1, 258, 2)
         m_list = np.arange(1, 4002, 25)
         cutoff_list = [m * trial_time_manual + 10**-6 * trial_time_manual for m in m_list]
-        num_processes = sys.argv[2]
+        num_processes = int(sys.argv[2])
         max_iter = 1e5
         start_time = time()
         with Pool(num_processes) as pool:
