@@ -49,6 +49,7 @@ ms_future = [5000, 50, 0, 200, 500]  # #5000/200/0/500/50 for NV/Ca/Qdot/Rb/SiV 
 
 
 def do_the_thing(length, max_iter, params, m, mode="sim"):
+    np.random.seed()
     p = run(length=length, max_iter=max_iter, params=params, m=m, mode=mode)
     return p.data
 
