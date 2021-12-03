@@ -5,7 +5,7 @@ from scenarios.whitepaper.run_whitepaper_nsp import available_params, future_par
 from libs.aux_functions import binary_entropy
 import pandas as pd
 
-result_path = os.path.join("results", "whitepaper")
+result_path = os.path.join("results", "whitepaper_timeslots")
 
 L_ATT = 22 * 10**3 / 1000  # attenuation length
 
@@ -44,13 +44,8 @@ def skr_whitepaper(L, m, params):
     return R * (1 - binary_entropy(1 / 2 * (1 - E)))
 
 
-# name_list = ["NV", "SiV", "Qdot", "Ca", "Rb"]
-name_list = ["NV", "SiV", "Ca", "Rb"]
-color_list = ["blue", "green", "orange", "red"]
-available_params = available_params[0:2] + available_params[3:]
-future_params = future_params[0:2] + future_params[3:]
-ms_available = ms_available[0:2] + ms_available[3:]
-ms_future = ms_future[0:2] + ms_future[3:]
+name_list = ["NV", "SiV", "Qdot", "Ca", "Rb"]
+color_list = ["blue", "green", "purple", "orange", "red"]
 
 # first plot available values
 plt.plot(x_base, y_repeaterless, color="black")
