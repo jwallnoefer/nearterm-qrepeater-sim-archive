@@ -5,7 +5,7 @@ from scenarios.whitepaper.run_whitepaper_nsp import available_params, future_par
 from libs.aux_functions import binary_entropy
 import pandas as pd
 
-result_path = os.path.join("results", "whitepaper")
+result_path = os.path.join("results", "whitepaper_timeslots")
 
 L_ATT = 22 * 10**3 / 1000  # attenuation length
 
@@ -44,13 +44,24 @@ def skr_whitepaper(L, m, params):
     return R * (1 - binary_entropy(1 / 2 * (1 - E)))
 
 
-# name_list = ["NV", "SiV", "Qdot", "Ca", "Rb"]
-name_list = ["NV", "SiV", "Ca", "Rb"]
-color_list = ["blue", "green", "orange", "red"]
-available_params = available_params[0:2] + available_params[3:]
-future_params = future_params[0:2] + future_params[3:]
-ms_available = ms_available[0:2] + ms_available[3:]
-ms_future = ms_future[0:2] + ms_future[3:]
+def kr_time_whitepaper(L, m, params):
+    c = 2 * 10**8
+    p = params["P_LINK"] * np.exp(-L / 2 / (L_ATT * 1000))
+    q = 1 - p
+    R = p * (2 - p - 2 * q**(m + 1)) / (3 - 2 * p - 2 * q**(m + 1))
+    t_coh = params["T_DP"]
+    T_0 = L / c
+
+    def PofMisj(j):
+        if j == 0:
+            return p / (2 - p)
+        else:
+            return 2 * p * q**j / (2 - p)
+    E = np.sum([PofMisj(j) * np.exp(-(j + 2) * T_0 / t_coh) for j in range(m + 1)]) / np.sum([PofMisj(j) for j in range(m + 1)])
+    return 1/(1/R + 1/2) * (1 - binary_entropy(1 / 2 * (1 - E))) / 2
+
+name_list = ["NV", "SiV", "Qdot", "Ca", "Rb"]
+color_list = ["blue", "green", "purple", "orange", "red"]
 
 # first plot available values
 plt.plot(x_base, y_repeaterless, color="black")
@@ -73,7 +84,7 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Available parameters")
-# plt.savefig(os.path.join(result_path, "available", "no_cutoff.png"))
+plt.savefig(os.path.join(result_path, "available", "no_cutoff.png"))
 plt.savefig(os.path.join(result_path, "available", "no_cutoff.pdf"), bbox_inches="tight", pad_inches=1)
 plt.show()
 
@@ -98,7 +109,7 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Future parameters")
-# plt.savefig(os.path.join(result_path, "future", "no_cutoff.png"))
+plt.savefig(os.path.join(result_path, "future", "no_cutoff.png"))
 plt.savefig(os.path.join(result_path, "future", "no_cutoff.pdf"), bbox_inches="tight", pad_inches=1)
 plt.show()
 
@@ -116,15 +127,14 @@ for name, color, params, m in zip(name_list, color_list, available_params, ms_av
     df = pd.read_csv(os.path.join(path, "result.csv"), index_col=0)
     x = df.index / 1000
     y = db(df["key_per_resource"] / 2)
+    # yerr = 10 / (df["key_per_resource"] / 2 * np.log(10)) * df["key_per_resource_std"] / 2
+    # print(yerr)
     if name == "Ca":
         name = "Ca/Yb"
     plt.scatter(x, y, marker="o", s=5, label=name, color=color)
+    # plt.errorbar(x, y, yerr=yerr, marker="o", ms=2, ls="none", label=name, color=color)
     y_whitepaper = db([skr_whitepaper(l, m, params) / 2 for l in (x_base * 1000)])
-    plt.plot(x_base, y_whitepaper, color=color)
-    y_whitepaper = db([skr_whitepaper(l, m + 2, params) / 2 for l in (x_base * 1000)])
-    plt.plot(x_base, y_whitepaper, color=color, linestyle="dashed")
-    y_whitepaper = db([skr_whitepaper(l, m - 2, params) / 2 for l in (x_base * 1000)])
-    plt.plot(x_base, y_whitepaper, color=color, linestyle="dotted")
+    plt.plot(x_base, y_whitepaper, color=color, linestyle="solid")
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
 plt.legend()
@@ -132,7 +142,7 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Available parameters")
-# plt.savefig(os.path.join(result_path, "available", "compare.png"))
+plt.savefig(os.path.join(result_path, "available", "compare.png"))
 plt.savefig(os.path.join(result_path, "available", "compare.pdf"), bbox_inches="tight", pad_inches=1)
 plt.show()
 
@@ -151,7 +161,8 @@ for name, color, params, m in zip(name_list, color_list, future_params, ms_futur
         name = "Ca/Yb"
     plt.scatter(x, y, marker="o", s=5, label=name, color=color)
     y_whitepaper = db([skr_whitepaper(l, m, params) / 2 for l in (x_base * 1000)])
-    plt.plot(x_base, y_whitepaper, color=color)
+    plt.plot(x_base, y_whitepaper, color=color, linestyle="solid")
+
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
 plt.legend()
@@ -159,6 +170,6 @@ plt.grid()
 plt.xlabel("L [km]")
 plt.ylabel("secret key rate per channel use [dB]")
 plt.title("Future parameters")
-# plt.savefig(os.path.join(result_path, "future", "compare.png"))
+plt.savefig(os.path.join(result_path, "future", "compare.png"))
 plt.savefig(os.path.join(result_path, "future", "compare.pdf"), bbox_inches="tight", pad_inches=1)
 plt.show()
