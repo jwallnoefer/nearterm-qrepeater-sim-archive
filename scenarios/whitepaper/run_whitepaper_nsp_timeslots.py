@@ -102,9 +102,9 @@ if __name__ == "__main__":
         with Pool(num_processes) as pool:
             for name, params, m in zip(name_list, available_params, ms_available):
                 shortened_length_list = length_list[length_list <= length_cutoffs[name]]
-                trial_times = shortened_length_list / C
+                cutoff_steps = 2 * m
                 num_calls = len(shortened_length_list)
-                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, [m] * num_calls, [mode] * num_calls)
+                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, [cutoff_steps] * num_calls, [mode] * num_calls)
                 res[name] = pool.starmap_async(do_the_thing, aux_list)
             pool.close()
 
@@ -176,9 +176,9 @@ if __name__ == "__main__":
         with Pool(num_processes) as pool:
             for name, params, m in zip(name_list, future_params, ms_future):
                 shortened_length_list = length_list[length_list <= length_cutoffs[name]]
-                trial_times = shortened_length_list / C
+                cutoff_steps = 2 * m  # due to time steps being counted differently in simulation and paper
                 num_calls = len(shortened_length_list)
-                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, [m] * num_calls, [mode] * num_calls)
+                aux_list = zip(shortened_length_list, [max_iter] * num_calls, [params] * num_calls, [cutoff_steps] * num_calls, [mode] * num_calls)
                 res[name] = pool.starmap_async(do_the_thing, aux_list)
             pool.close()
 
