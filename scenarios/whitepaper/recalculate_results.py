@@ -5,9 +5,8 @@ from libs.aux_functions import standard_bipartite_evaluation
 
 
 def recalculate(data_directory):
-    c = 2e8
     data_series = pd.read_pickle(os.path.join(data_directory, "raw_data.bz2"))
-    result_list = [standard_bipartite_evaluation(data_frame=df, trial_time=length / c) for length, df in data_series.items()]
+    result_list = [standard_bipartite_evaluation(data_frame=df, trial_time=2) for length, df in data_series.items()]
     output_data = pd.DataFrame(data=result_list, index=data_series.index, columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"])
     output_data.to_csv(os.path.join(data_directory, "result.csv"))
 
