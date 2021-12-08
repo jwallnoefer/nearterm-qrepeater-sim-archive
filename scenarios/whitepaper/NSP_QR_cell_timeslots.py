@@ -202,7 +202,7 @@ def run(length, max_iter, params, m=None, mode="sim"):
 
 
 if __name__ == "__main__":
-    p = run(length=22000, max_iter=100, params={"P_LINK": 50 * 10**-2,
+    p = run(length=22000, max_iter=100, params={"P_LINK": 5 * 10**-2,
                            "f_clock": 5 * 10**6,
-                           "T_DP": 100 * 10**-3}, m=0, mode="sim")
+                           "T_DP": 100 * 10**-3}, m=2, mode="sim")
     print(p.data)
