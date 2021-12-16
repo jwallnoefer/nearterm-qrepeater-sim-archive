@@ -1,10 +1,13 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 from scenarios.multimemory.multi_memory_luetkenhaus import run
-from libs.aux_functions import assert_dir, binary_entropy, calculate_keyrate_time, calculate_keyrate_channel_use
+from libs.aux_functions import assert_dir, standard_bipartite_evaluation
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
+from multiprocessing import Pool
+import pandas as pd
 
-C = 2 * 10**8 # speed of light in optical fiber
+C = 2 * 10**8  # speed of light in optical fiber
 result_path = os.path.join("results", "multimemory_luetkenhaus")
 
 # # # values taken from Róbert Trényi, Norbert Lütkenhaus https://arxiv.org/abs/1910.10962
@@ -28,39 +31,41 @@ params = {"P_LINK": ETA_TOT,
           "P_D": P_D,
           "LAMBDA_BSM": LAMBDA_BSM}
 
+
+def do_the_thing(length, max_iter, params, num_memories, mode="seq"):
+    np.random.seed()
+    p = run(length=length, max_iter=max_iter, params=params, num_memories=num_memories, mode=mode)
+    return p.data
+
+
 if __name__ == "__main__":
-    length_list = np.arange(20000, 400000, 20000)
-    num_memories = 400
+    case = int(sys.argv[1])
+    assert case == 0
+    num_processes = int(sys.argv[2])
+    length_list = np.linspace(0, 500e3, num=128)
+    memories = [1, 10, 100, 400, 1000]
     mode = "seq"
-    key_per_time_list = []
-    key_per_resource_list = []
-    from time import time
-    for l in length_list:
-        print(l)
-        start_time = time()
-        p = run(length=l, max_iter=1000, params=params, num_memories=num_memories, mode=mode)
-        key_per_time = calculate_keyrate_time(p.correlations_z_list, p.correlations_x_list, F, p.world.event_queue.current_time + 2 * l / C)
-        key_per_resource = calculate_keyrate_channel_use(p.correlations_z_list, p.correlations_x_list, F, p.resource_cost_max_list)
+    max_iter = 1e5
+    res = {}
+    start_time = time()
+    with Pool(num_processes) as pool:
+        for num_memories in memories:
+            num_calls = len(length_list)
+            aux_list = zip(length_list, [max_iter] * num_calls,
+                           [params] * num_calls, [num_memories] * num_calls,
+                           [mode] * num_calls
+                           )
+            res[num_memories] = pool.starmap_async(do_the_thing, aux_list)
+        pool.close()
 
-        key_per_time_list += [key_per_time]
-        key_per_resource_list += [key_per_resource]
-        print("l=%d took %s seconds" % (l, str(time() - start_time)))
-
-    output_path = os.path.join(result_path, "%d_memories" % num_memories)
-    assert_dir(output_path)
-
-    np.savetxt(os.path.join(output_path, "length_list_%s.txt" % mode), length_list)
-    np.savetxt(os.path.join(output_path, "key_per_time_list_%s.txt" % mode), key_per_time_list)
-    np.savetxt(os.path.join(output_path, "key_per_resource_list_%s.txt" % mode), key_per_resource_list)
-
-    plt.plot(length_list, key_per_time_list)
-    plt.yscale("log")
-    plt.xlabel("total length")
-    plt.ylabel("key_rate_per_time")
-    plt.show()
-
-    plt.plot(length_list, key_per_resource_list)
-    plt.yscale("log")
-    plt.xlabel("total length")
-    plt.ylabel("key rate per channel use")
-    plt.show()
+        for num_memories in memories:
+            data_series = pd.Series(data=res[num_memories].get(), index=length_list)
+            print(f"num_memories={num_memories} finished after {(time()-start_time)/60:.2f} minutes")
+            output_path = os.path.join(result_path, f"{num_memories}_memories")
+            assert_dir(output_path)
+            data_series.to_pickle(os.path.join(output_path, "raw_data.bz2"))
+            result_list = [standard_bipartite_evaluation(data_frame=df, err_corr_ineff=F) for df in data_series]
+            output_data = pd.DataFrame(data=result_list, index=length_list,
+                                       columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"]
+                                       )
+            output_data.to_csv(os.path.join(output_path, "result.csv"))

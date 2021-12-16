@@ -1,14 +1,15 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
-from quantum_objects import SchedulingSource, Source, Station
-from protocol import Protocol, MessageReadingProtocol
+from quantum_objects import SchedulingSource, Source, Station, Pair
+from protocol import Protocol, MessageReadingProtocol, TwoLinkProtocol
 from world import World
 from events import SourceEvent, EntanglementSwappingEvent, EntanglementPurificationEvent
 import libs.matrix as mat
 import numpy as np
-from libs.aux_functions import apply_single_qubit_map, y_noise_channel, z_noise_channel, w_noise_channel
+from libs.aux_functions import apply_single_qubit_map, y_noise_channel, z_noise_channel, w_noise_channel, distance
 from warnings import warn
 from collections import defaultdict
 from noise import NoiseModel, NoiseChannel
+from scipy.stats import binom
 
 # WARNING: this protocol will not work with memory time outs as that is managed separately by the protocol
 
@@ -38,140 +39,76 @@ def alpha_of_eta(eta, p_d):
     return eta * (1 - p_d) / (1 - (1 - eta) * (1 - p_d)**2)
 
 
-def _bool_from_probability(success_probability):
-    if np.random.random() <= success_probability:
-        return True
-    else:
-        return False
+# def _bool_from_probability(success_probability):
+#     if np.random.random() <= success_probability:
+#         return True
+#     else:
+#         return False
+
+def _successes_from_modified_cdf(cdf):
+    random_num = np.random.random()
+    for i, limit in enumerate(cdf):
+        if random_num < limit:
+            return i
 
 
-class ProbabilisticSource(SchedulingSource):
-    def __init__(self, world, position, target_stations, trial_time, state_generation, check_success):
-        if callable(trial_time):
-            def time_distribution(source):
-                times_tried = 1
-                return trial_time(source), times_tried
-        else:
-            def time_distribution(source):
-                times_tried = 1
-                return trial_time, times_tried
-        if callable(check_success):
-            self.check_success = check_success
-        else:
-            self.check_success = lambda source: _bool_from_probability(success_probability=check_success)
-        super(ProbabilisticSource, self).__init__(world=world, position=position,
-                                                  target_stations=target_stations,
-                                                  time_distribution=time_distribution,
-                                                  state_generation=state_generation)
+class MultiSource(SchedulingSource):
+    # this assumes the states that are generated are identical!
+    def __init__(self, world, position, target_stations, time_distribution, success_distribution, state_generation, num_channels, label=None):
+        self.success_distribution = success_distribution
+        self.num_channels = num_channels
+        self.resource_tracking_max = 0
+        self.resource_tracking_add = 0
+        super(MultiSource, self).__init__(world, position, target_stations, time_distribution, state_generation, label)
 
-    def generate_pair(self, initial_state, initial_cost_add=None, initial_cost_max=None):
-        if self.check_success(self):
-            return super(ProbabilisticSource, self).generate_pair(initial_state=initial_state, initial_cost_add=initial_cost_add, initial_cost_max=initial_cost_max)
-        else:
-            pair = super(ProbabilisticSource, self).generate_pair(initial_state=initial_state, initial_cost_add=initial_cost_add, initial_cost_max=initial_cost_max)
-            pair.destroy_and_track_resources()
-            pair.qubits[0].destroy()
-            pair.qubits[1].destroy()
-            return None
+    def schedule_event(self):
+        time_delay, times_tried = self.time_distribution(source=self)
+        num_successes = self.success_distribution(source=self)
+        scheduled_time = self.event_queue.current_time + time_delay
+        initial_state = self.state_generation(source=self)  # should accurately describe state at the scheduled time
+        multi_source_event = SourceEvent(time=scheduled_time, source=self,
+                                         initial_state=initial_state,
+                                         num_successes=num_successes,
+                                         initial_cost_add=times_tried * self.num_channels,
+                                         initial_cost_max=times_tried * self.num_channels
+                                         )
+        self.event_queue.add_event(multi_source_event)
+        return multi_source_event
+
+    def generate_pair(self, initial_state, num_successes, initial_cost_add=None, initial_cost_max=None):
+        station1 = self.target_stations[0]
+        station2 = self.target_stations[1]
+        self.resource_tracking_max = initial_cost_max
+        self.resource_tracking_add = initial_cost_add
+        pairs = []
+        for i in range(num_successes):
+            qubit1 = station1.create_qubit()
+            qubit2 = station2.create_qubit()
+            pair = Pair(world=self.world, qubits=[qubit1, qubit2], initial_state=np.copy(initial_state))
+            pairs += [pair]
+        return pairs
+
+    def reset_resource_tracking(self):
+        self.resource_tracking_max = 0
+        self.resource_tracking_add = 0
 
 
-class MultiMemoryProtocol(Protocol):
-    def __init__(self, world, num_memories, mode="seq"):
+class MultiMemoryProtocol(TwoLinkProtocol):
+    def __init__(self, world, num_memories):
         self.num_memories = num_memories
-        self.mode = mode
-        self.time_list = []
-        self.fidelity_list = []
-        self.correlations_z_list = []
-        self.correlations_x_list = []
-        self.resource_cost_max_list = []
         super(MultiMemoryProtocol, self).__init__(world=world)
 
-    def setup(self):
-        """Identifies the stations and sources in the world.
-
-        Should be run after the relevant WorldObjects have been added
-        to the world.
-
-        Returns
-        -------
-        None
-
-        """
-        stations = self.world.world_objects["Station"]
-        assert len(stations) == 3
-        self.station_A, self.station_central, self.station_B = sorted(stations, key=lambda x: x.position)
-        sources = self.world.world_objects["Source"]
-        assert len(sources) == 2
-        self.source_A = next(filter(lambda source: self.station_A in source.target_stations and self.station_central in source.target_stations, sources))
-        self.source_B = next(filter(lambda source: self.station_central in source.target_stations and self.station_B in source.target_stations, sources))
-        assert callable(getattr(self.source_A, "schedule_event", None))  # schedule_event is a required method for this protocol
-        assert callable(getattr(self.source_B, "schedule_event", None))
-
-    def _pair_is_between_stations(self, pair, station1, station2):
-        return (pair.qubit1.station == station1 and pair.qubit2.station == station2) or (pair.qubit1.station == station2 and pair.qubit2.station == station1)
-
-    def _get_left_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_central), pairs))
-
-    def _get_right_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_central, self.station_B), pairs))
-
-    def _get_long_range_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_B), pairs))
-
-    def _left_pair_is_scheduled(self):
-        try:
-            next(filter(lambda event: (isinstance(event, SourceEvent)
-                                       and (self.station_A in event.source.target_stations)
-                                       and (self.station_central in event.source.target_stations)
-                                       ),
-                        self.world.event_queue.queue))
-            return True
-        except StopIteration:
-            return False
-
-    def _right_pair_is_scheduled(self):
-        try:
-            next(filter(lambda event: (isinstance(event, SourceEvent)
-                                       and (self.station_central in event.source.target_stations)
-                                       and (self.station_B in event.source.target_stations)
-                                       ),
-                        self.world.event_queue.queue))
-            return True
-        except StopIteration:
-            return False
-
-    def _eval_pair(self, long_range_pair):
-        comm_distance = np.max([np.abs(self.station_central.position - self.station_A.position), np.abs(self.station_B.position - self.station_central.position)])
-        comm_time = comm_distance / C
-
-        pair_fidelity = np.real_if_close(np.dot(np.dot(mat.H(mat.phiplus), long_range_pair.state), mat.phiplus))[0, 0]
-        self.time_list += [self.world.event_queue.current_time + comm_time]
-        self.fidelity_list += [pair_fidelity]
-
-        z0z0 = mat.tensor(mat.z0, mat.z0)
-        z1z1 = mat.tensor(mat.z1, mat.z1)
-        correlations_z = np.real_if_close(np.dot(np.dot(mat.H(z0z0), long_range_pair.state), z0z0)[0, 0] + np.dot(np.dot(mat.H(z1z1), long_range_pair.state), z1z1))[0, 0]
-        self.correlations_z_list += [correlations_z]
-
-        x0x0 = mat.tensor(mat.x0, mat.x0)
-        x1x1 = mat.tensor(mat.x1, mat.x1)
-        correlations_x = np.real_if_close(np.dot(np.dot(mat.H(x0x0), long_range_pair.state), x0x0)[0, 0] + np.dot(np.dot(mat.H(x1x1), long_range_pair.state), x1x1))[0, 0]
-        self.correlations_x_list += [correlations_x]
-
-        self.resource_cost_max_list += [long_range_pair.resource_cost_max]
+    def _eval_pairs(self, long_range_pairs):
+        num_pairs = len(long_range_pairs)
+        comm_distance = np.max([distance(self.station_central, self.station_A), distance(self.station_B, self.station_central)])
+        comm_time = comm_distance / self.communication_speed
+        resource_cost_add = (self.source_A.resource_tracking_add + self.source_B.resource_tracking_add) / num_pairs
+        resource_cost_max = max(self.source_A.resource_tracking_max, self.source_B.resource_tracking_max) / num_pairs
+        for long_range_pair in long_range_pairs:
+            self.time_list += [self.world.event_queue.current_time + comm_time]
+            self.state_list += [long_range_pair.state]
+            self.resource_cost_max_list += [resource_cost_max]
+            self.resource_cost_add_list += [resource_cost_add]
         return
 
     def check(self):
@@ -181,21 +118,11 @@ class MultiMemoryProtocol(Protocol):
         num_left_pairs = len(left_pairs)
         right_pairs = self._get_right_pairs()
         num_right_pairs = len(right_pairs)
-        if self.mode == "sim":
-            if num_left_pairs == 0:
-                for _ in range(self.num_memories):
-                    self.source_A.schedule_event()
-            if num_right_pairs == 0:
-                for _ in range(self.num_memories):
-                    self.source_B.schedule_event()
-        elif self.mode == "seq":
-            if num_left_pairs == 0:
-                for _ in range(self.num_memories):
-                    self.source_A.schedule_event()
-            if num_left_pairs != 0 and num_right_pairs == 0:
-                for _ in range(self.num_memories):
-                    self.source_B.schedule_event()
-        if num_left_pairs != 0 and num_right_pairs != 0:
+        if num_left_pairs == 0 and num_right_pairs == 0:
+            self.source_A.schedule_event()
+        elif num_left_pairs != 0 and num_right_pairs == 0:
+            self.source_B.schedule_event()
+        elif num_left_pairs != 0 and num_right_pairs != 0:
             num_swappings = min(num_left_pairs, num_right_pairs)
             # discard leftover pairs
             for pair in left_pairs[num_swappings:] + right_pairs[num_swappings:]:
@@ -207,13 +134,184 @@ class MultiMemoryProtocol(Protocol):
                 self.world.event_queue.add_event(ent_swap_event)
         long_range_pairs = self._get_long_range_pairs()
         if long_range_pairs:
+            self._eval_pairs(long_range_pairs)
+            # cleanup
+            self.source_A.reset_resource_tracking()
+            self.source_B.reset_resource_tracking()
             for long_range_pair in long_range_pairs:
-                self._eval_pair(long_range_pair)
-                # cleanup
                 long_range_pair.qubits[0].destroy()
                 long_range_pair.qubits[1].destroy()
                 long_range_pair.destroy()
-            self.check()
+
+# class ProbabilisticSource(SchedulingSource):
+#     def __init__(self, world, position, target_stations, trial_time, state_generation, check_success):
+#         if callable(trial_time):
+#             def time_distribution(source):
+#                 times_tried = 1
+#                 return trial_time(source), times_tried
+#         else:
+#             def time_distribution(source):
+#                 times_tried = 1
+#                 return trial_time, times_tried
+#         if callable(check_success):
+#             self.check_success = check_success
+#         else:
+#             self.check_success = lambda source: _bool_from_probability(success_probability=check_success)
+#         super(ProbabilisticSource, self).__init__(world=world, position=position,
+#                                                   target_stations=target_stations,
+#                                                   time_distribution=time_distribution,
+#                                                   state_generation=state_generation)
+#
+#     def generate_pair(self, initial_state, initial_cost_add=None, initial_cost_max=None):
+#         if self.check_success(self):
+#             return super(ProbabilisticSource, self).generate_pair(initial_state=initial_state, initial_cost_add=initial_cost_add, initial_cost_max=initial_cost_max)
+#         else:
+#             pair = super(ProbabilisticSource, self).generate_pair(initial_state=initial_state, initial_cost_add=initial_cost_add, initial_cost_max=initial_cost_max)
+#             pair.destroy_and_track_resources()
+#             pair.qubits[0].destroy()
+#             pair.qubits[1].destroy()
+#             return None
+
+
+# class MultiMemoryProtocol(Protocol):
+#     def __init__(self, world, num_memories, mode="seq"):
+#         self.num_memories = num_memories
+#         self.mode = mode
+#         self.time_list = []
+#         self.fidelity_list = []
+#         self.correlations_z_list = []
+#         self.correlations_x_list = []
+#         self.resource_cost_max_list = []
+#         super(MultiMemoryProtocol, self).__init__(world=world)
+#
+#     def setup(self):
+#         """Identifies the stations and sources in the world.
+#
+#         Should be run after the relevant WorldObjects have been added
+#         to the world.
+#
+#         Returns
+#         -------
+#         None
+#
+#         """
+#         stations = self.world.world_objects["Station"]
+#         assert len(stations) == 3
+#         self.station_A, self.station_central, self.station_B = sorted(stations, key=lambda x: x.position)
+#         sources = self.world.world_objects["Source"]
+#         assert len(sources) == 2
+#         self.source_A = next(filter(lambda source: self.station_A in source.target_stations and self.station_central in source.target_stations, sources))
+#         self.source_B = next(filter(lambda source: self.station_central in source.target_stations and self.station_B in source.target_stations, sources))
+#         assert callable(getattr(self.source_A, "schedule_event", None))  # schedule_event is a required method for this protocol
+#         assert callable(getattr(self.source_B, "schedule_event", None))
+#
+#     def _pair_is_between_stations(self, pair, station1, station2):
+#         return (pair.qubit1.station == station1 and pair.qubit2.station == station2) or (pair.qubit1.station == station2 and pair.qubit2.station == station1)
+#
+#     def _get_left_pairs(self):
+#         try:
+#             pairs = self.world.world_objects["Pair"]
+#         except KeyError:
+#             pairs = []
+#         return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_central), pairs))
+#
+#     def _get_right_pairs(self):
+#         try:
+#             pairs = self.world.world_objects["Pair"]
+#         except KeyError:
+#             pairs = []
+#         return list(filter(lambda x: self._pair_is_between_stations(x, self.station_central, self.station_B), pairs))
+#
+#     def _get_long_range_pairs(self):
+#         try:
+#             pairs = self.world.world_objects["Pair"]
+#         except KeyError:
+#             pairs = []
+#         return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_B), pairs))
+#
+#     def _left_pair_is_scheduled(self):
+#         try:
+#             next(filter(lambda event: (isinstance(event, SourceEvent)
+#                                        and (self.station_A in event.source.target_stations)
+#                                        and (self.station_central in event.source.target_stations)
+#                                        ),
+#                         self.world.event_queue.queue))
+#             return True
+#         except StopIteration:
+#             return False
+#
+#     def _right_pair_is_scheduled(self):
+#         try:
+#             next(filter(lambda event: (isinstance(event, SourceEvent)
+#                                        and (self.station_central in event.source.target_stations)
+#                                        and (self.station_B in event.source.target_stations)
+#                                        ),
+#                         self.world.event_queue.queue))
+#             return True
+#         except StopIteration:
+#             return False
+#
+#     def _eval_pair(self, long_range_pair):
+#         comm_distance = np.max([np.abs(self.station_central.position - self.station_A.position), np.abs(self.station_B.position - self.station_central.position)])
+#         comm_time = comm_distance / C
+#
+#         pair_fidelity = np.real_if_close(np.dot(np.dot(mat.H(mat.phiplus), long_range_pair.state), mat.phiplus))[0, 0]
+#         self.time_list += [self.world.event_queue.current_time + comm_time]
+#         self.fidelity_list += [pair_fidelity]
+#
+#         z0z0 = mat.tensor(mat.z0, mat.z0)
+#         z1z1 = mat.tensor(mat.z1, mat.z1)
+#         correlations_z = np.real_if_close(np.dot(np.dot(mat.H(z0z0), long_range_pair.state), z0z0)[0, 0] + np.dot(np.dot(mat.H(z1z1), long_range_pair.state), z1z1))[0, 0]
+#         self.correlations_z_list += [correlations_z]
+#
+#         x0x0 = mat.tensor(mat.x0, mat.x0)
+#         x1x1 = mat.tensor(mat.x1, mat.x1)
+#         correlations_x = np.real_if_close(np.dot(np.dot(mat.H(x0x0), long_range_pair.state), x0x0)[0, 0] + np.dot(np.dot(mat.H(x1x1), long_range_pair.state), x1x1))[0, 0]
+#         self.correlations_x_list += [correlations_x]
+#
+#         self.resource_cost_max_list += [long_range_pair.resource_cost_max]
+#         return
+#
+#     def check(self):
+#         if self.world.event_queue.queue:  # this protocol only acts when event_queue is empty
+#             return
+#         left_pairs = self._get_left_pairs()
+#         num_left_pairs = len(left_pairs)
+#         right_pairs = self._get_right_pairs()
+#         num_right_pairs = len(right_pairs)
+#         if self.mode == "sim":
+#             if num_left_pairs == 0:
+#                 for _ in range(self.num_memories):
+#                     self.source_A.schedule_event()
+#             if num_right_pairs == 0:
+#                 for _ in range(self.num_memories):
+#                     self.source_B.schedule_event()
+#         elif self.mode == "seq":
+#             if num_left_pairs == 0:
+#                 for _ in range(self.num_memories):
+#                     self.source_A.schedule_event()
+#             if num_left_pairs != 0 and num_right_pairs == 0:
+#                 for _ in range(self.num_memories):
+#                     self.source_B.schedule_event()
+#         if num_left_pairs != 0 and num_right_pairs != 0:
+#             num_swappings = min(num_left_pairs, num_right_pairs)
+#             # discard leftover pairs
+#             for pair in left_pairs[num_swappings:] + right_pairs[num_swappings:]:
+#                 pair.destroy_and_track_resources()
+#                 pair.qubits[0].destroy()
+#                 pair.qubits[1].destroy()
+#             for left_pair, right_pair in zip(left_pairs[:num_swappings], right_pairs[:num_swappings]):
+#                 ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time, pairs=[left_pair, right_pair])
+#                 self.world.event_queue.add_event(ent_swap_event)
+#         long_range_pairs = self._get_long_range_pairs()
+#         if long_range_pairs:
+#             for long_range_pair in long_range_pairs:
+#                 self._eval_pair(long_range_pair)
+#                 # cleanup
+#                 long_range_pair.qubits[0].destroy()
+#                 long_range_pair.qubits[1].destroy()
+#                 long_range_pair.destroy()
+#             self.check()
 
 
 def run(length, max_iter, params, num_memories, mode="seq"):
@@ -246,15 +344,36 @@ def run(length, max_iter, params, num_memories, mode="seq"):
     def imperfect_bsm_err_func(four_qubit_state):
         return LAMBDA_BSM * four_qubit_state + (1 - LAMBDA_BSM) * mat.reorder(mat.tensor(mat.ptrace(four_qubit_state, [1, 2]), mat.I(4) / 4), [0, 2, 3, 1])
 
-    def trial_time(source):
-        comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
-        return T_P + 2 * comm_distance / C
-
-    def check_success(source):
-        comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
+    def time_distribution(source):
+        comm_distance = max(distance(source, source.target_stations[0]), distance(source, source.target_stations[1]))
+        comm_time = 2 * comm_distance / C
         eta = P_LINK * np.exp(-comm_distance / L_ATT)
         eta_effective = 1 - (1 - eta) * (1 - P_D)**2
-        return _bool_from_probability(eta_effective)
+        p_s = 1 - (1 - eta_effective)**num_memories
+        trial_time = T_P + comm_time
+        random_num = np.random.geometric(p_s)
+        return random_num * trial_time, random_num
+
+    def success_distribution(source):
+        comm_distance = max(distance(source, source.target_stations[0]), distance(source, source.target_stations[1]))
+        eta = P_LINK * np.exp(-comm_distance / L_ATT)
+        eta_effective = 1 - (1 - eta) * (1 - P_D)**2
+        # number of successes are binomially distributed, but with the case 0 successes cut off
+        cdf = np.array([binom.cdf(k, n=num_memories, p=eta_effective) for k in range(num_memories + 1)])
+        new_cdf = np.concatenate([[0.0], (cdf[1:] - cdf[0]) / (1.0 - cdf[0])])
+        num_successes = _successes_from_modified_cdf(new_cdf)
+        return num_successes
+
+
+    # def trial_time(source):
+    #     comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
+    #     return T_P + 2 * comm_distance / C
+
+    # def check_success(source):
+    #     comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
+    #     eta = P_LINK * np.exp(-comm_distance / L_ATT)
+    #     eta_effective = 1 - (1 - eta) * (1 - P_D)**2
+    #     return _bool_from_probability(eta_effective)
 
     def state_generation(source):
         state = np.dot(mat.phiplus, mat.H(mat.phiplus))
@@ -275,17 +394,31 @@ def run(length, max_iter, params, num_memories, mode="seq"):
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
-    station_B = Station(world, position=length, memory_noise=None,
-                        creation_noise_channel=misalignment_noise,
-                        dark_count_probability=P_D
-                        )
     station_central = Station(world, id=2, position=length / 2,
                               memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP),
                               memory_cutoff_time=cutoff_time,
                               BSM_noise_model=NoiseModel(channel_before=NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func))
                               )
-    source_A = ProbabilisticSource(world, position=length / 2, target_stations=[station_A, station_central], trial_time=trial_time, state_generation=state_generation, check_success=check_success)
-    source_B = ProbabilisticSource(world, position=length / 2, target_stations=[station_central, station_B], trial_time=trial_time, state_generation=state_generation, check_success=check_success)
+    station_B = Station(world, position=length, memory_noise=None,
+                        creation_noise_channel=misalignment_noise,
+                        dark_count_probability=P_D
+                        )
+    # source_A = ProbabilisticSource(world, position=length / 2, target_stations=[station_A, station_central], trial_time=trial_time, state_generation=state_generation, check_success=check_success)
+    # source_B = ProbabilisticSource(world, position=length / 2, target_stations=[station_central, station_B], trial_time=trial_time, state_generation=state_generation, check_success=check_success)
+    source_A = MultiSource(world, position=length / 2,
+                           target_stations=[station_A, station_central],
+                           time_distribution=time_distribution,
+                           success_distribution=success_distribution,
+                           state_generation=state_generation,
+                           num_channels=num_memories
+                           )
+    source_B = MultiSource(world, position=length / 2,
+                           target_stations=[station_central, station_B],
+                           time_distribution=time_distribution,
+                           success_distribution=success_distribution,
+                           state_generation=state_generation,
+                           num_channels=num_memories
+                           )
     protocol = MultiMemoryProtocol(world, num_memories=num_memories)
     protocol.setup()
 
@@ -297,7 +430,7 @@ def run(length, max_iter, params, num_memories, mode="seq"):
 
 
 if __name__ == "__main__":
-    p = run(length=22000, max_iter=1000, params={}, num_memories=100, mode="seq")
+    p = run(length=0, max_iter=1000, params={}, num_memories=100, mode="seq")
     import matplotlib.pyplot as plt
     plt.scatter(p.time_list, p.resource_cost_max_list)
     plt.show()
