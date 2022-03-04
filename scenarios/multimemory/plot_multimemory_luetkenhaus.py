@@ -1,5 +1,6 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scenarios.multimemory.run_multimemory_luetkenhaus import params, F, P_BSM
 # from scipy.stats import binom
@@ -22,6 +23,14 @@ result_path = os.path.join("results", "multimemory_luetkenhaus")
     #         print("Warning was raised", e)
     #         print(args, kwargs)
     #         raise e
+
+
+# comparison to capacity bounds
+def c_loss(length, N):
+    # N is the number of intermediate stations
+    eta = np.exp(- length / L_ATT)
+    return - np.log2(1 - eta**(1 / (N + 1)))
+
 
 def B(k, n, p):
     assert 0 <= k <= n
@@ -75,6 +84,7 @@ def R(L, num_memories):
         + (1 - lambda_bsm * alpha_of_eta(eta)**2) / 2
     return Y / 2 * (1 - binary_entropy(e_X) - F * binary_entropy(e_Z))
 
+
 def inverse_channel_use(L, num_memories):
     m = num_memories
     eta = params["P_LINK"] * np.exp(-L / 2 / L_ATT)
@@ -98,6 +108,7 @@ def inverse_channel_use(L, num_memories):
         return (1 - np.exp(-t / params["T_DP"])) / 2
 
     return 1 / p_s**2 * k_p_kbits_sum(eta_effective) / m_E_max
+
 
 def entropy_term(L, num_memories):
     m = num_memories
@@ -134,22 +145,26 @@ def entropy_term(L, num_memories):
         + (1 - lambda_bsm * alpha_of_eta(eta)**2) / 2
     return (1 - binary_entropy(e_X) - F * binary_entropy(e_Z))
 
-num_memories = 400
-output_path = os.path.join(result_path, "%d_memories" % num_memories)
-x = np.loadtxt(os.path.join(output_path, "length_list_seq.txt"))
-y = np.loadtxt(os.path.join(output_path, "key_per_resource_list_seq.txt")) / 2
-plt.scatter(x / 1000, y)
-
-x = np.linspace(0, 800e3, num=200)
-memories = [1, 400, 1000]
+x = np.linspace(0, 500e3, num=200)
+memories = [1, 10, 100, 400, 1000]
 for memory in memories:
     print(memory)
     y = [R(L=length, num_memories=memory) for length in x]
     plt.plot(x / 1000, y, label=f"num_memories={memory}")
+    output_path = os.path.join(result_path, f"{memory}_memories")
+    df = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+    xx = df.index / 1000
+    yy = df["key_per_resource"] / 2
+    plt.scatter(xx, yy, s=10)
+plt.plot(x / 1000, [c_loss(length, 0) for length in x], ls="dashed", color="orange")
+plt.plot(x / 1000, [c_loss(length, 1) for length in x], ls="dashed", color="gray")
 plt.yscale("log")
-plt.ylim(1e-12, 1e-2)
+plt.ylim(1e-12, 1e1)
+plt.xlabel("Distance [km]")
+plt.ylabel("key per channel use")
 plt.grid()
 plt.legend(loc="upper right")
+plt.savefig(os.path.join(result_path, "comparison.png"))
 plt.show()
 
 x = np.linspace(0, 800e3, num=200)
