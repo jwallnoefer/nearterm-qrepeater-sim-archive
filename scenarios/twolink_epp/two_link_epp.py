@@ -1,6 +1,6 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 from quantum_objects import SchedulingSource, Station
-from protocol import MessageReadingProtocol
+from protocol import TwoLinkProtocol
 from world import World
 from events import SourceEvent, EntanglementSwappingEvent, EntanglementPurificationEvent
 import libs.matrix as mat
@@ -9,9 +9,8 @@ from libs.aux_functions import apply_single_qubit_map, y_noise_channel, z_noise_
 from warnings import warn
 from collections import defaultdict
 from noise import NoiseModel, NoiseChannel
-
-C = 2 * 10**8  # speed of light in optical fiber
-L_ATT = 22 * 10**3  # attenuation length
+from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
+from consts import ATTENUATION_LENGTH_IN_OPTICAL_FIBER as L_ATT
 
 
 def construct_dephasing_noise_channel(dephasing_time):
@@ -36,104 +35,12 @@ def alpha_of_eta(eta, p_d):
     return eta * (1 - p_d) / (1 - (1 - eta) * (1 - p_d)**2)
 
 
-class TwoLinkOneStepEPP(MessageReadingProtocol):
-    """Short summary.
-
-    Parameters
-    ----------
-    world : World
-        The world in which the protocol will be performed.
-
-    Attributes
-    ----------
-    time_list : list of scalars
-    fidelity_list : list of scalars
-    correlations_z_list : list of scalars
-    correlations_x_list : list of scalars
-    resource_cost_max_list : list of scalars
-    mode : str
-        "seq" or "sim"
-    epp_tracking: defaultdict
-        used internally for tracking how often a pair has been purified
-
-    """
-
-    def __init__(self, world, mode="seq"):
-        self.mode = mode
-        self.time_list = []
-        self.fidelity_list = []
-        self.correlations_z_list = []
-        self.correlations_x_list = []
-        self.resource_cost_max_list = []
+class TwoLinkOneStepEPP(TwoLinkProtocol):
+    def __init__(self, world, num_memories=2, epp_steps=1):
         self.epp_tracking = defaultdict(lambda: 0)
+        self.num_memories = num_memories
+        self.epp_steps = epp_steps
         super(TwoLinkOneStepEPP, self).__init__(world)
-
-    def setup(self):
-        """Identifies the stations and sources in the world.
-
-        Should be run after the relevant WorldObjects have been added
-        to the world.
-
-        Returns
-        -------
-        None
-
-        """
-        stations = self.world.world_objects["Station"]
-        assert len(stations) == 3
-        self.station_A, self.station_central, self.station_B = sorted(stations, key=lambda x: x.position)
-        sources = self.world.world_objects["Source"]
-        assert len(sources) == 2
-        self.source_A = next(filter(lambda source: self.station_A in source.target_stations and self.station_central in source.target_stations, sources))
-        self.source_B = next(filter(lambda source: self.station_central in source.target_stations and self.station_B in source.target_stations, sources))
-        assert callable(getattr(self.source_A, "schedule_event", None))  # schedule_event is a required method for this protocol
-        assert callable(getattr(self.source_B, "schedule_event", None))
-
-    def _pair_is_between_stations(self, pair, station1, station2):
-        return (pair.qubit1.station == station1 and pair.qubit2.station == station2) or (pair.qubit1.station == station2 and pair.qubit2.station == station1)
-
-    def _get_left_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_central), pairs))
-
-    def _get_right_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_central, self.station_B), pairs))
-
-    def _get_long_range_pairs(self):
-        try:
-            pairs = self.world.world_objects["Pair"]
-        except KeyError:
-            pairs = []
-        return list(filter(lambda x: self._pair_is_between_stations(x, self.station_A, self.station_B), pairs))
-
-    def _left_pair_is_scheduled(self):
-        try:
-            next(filter(lambda event: (isinstance(event, SourceEvent)
-                                       and (self.station_A in event.source.target_stations)
-                                       and (self.station_central in event.source.target_stations)
-                                       ),
-                        self.world.event_queue.queue))
-            return True
-        except StopIteration:
-            return False
-
-    def _right_pair_is_scheduled(self):
-        try:
-            next(filter(lambda event: (isinstance(event, SourceEvent)
-                                       and (self.station_central in event.source.target_stations)
-                                       and (self.station_B in event.source.target_stations)
-                                       ),
-                        self.world.event_queue.queue))
-            return True
-        except StopIteration:
-            return False
 
     def _left_epp_is_scheduled(self):
         try:
@@ -157,37 +64,8 @@ class TwoLinkOneStepEPP(MessageReadingProtocol):
         except StopIteration:
             return False
 
-    def _eval_pair(self, long_range_pair):
-        comm_distance = np.max([np.abs(self.station_central.position - self.station_A.position), np.abs(self.station_B.position - self.station_central.position)])
-        comm_time = comm_distance / C
-
-        pair_fidelity = np.real_if_close(np.dot(np.dot(mat.H(mat.phiplus), long_range_pair.state), mat.phiplus))[0, 0]
-        self.time_list += [self.world.event_queue.current_time + comm_time]
-        self.fidelity_list += [pair_fidelity]
-
-        z0z0 = mat.tensor(mat.z0, mat.z0)
-        z1z1 = mat.tensor(mat.z1, mat.z1)
-        correlations_z = np.real_if_close(np.dot(np.dot(mat.H(z0z0), long_range_pair.state), z0z0)[0, 0] + np.dot(np.dot(mat.H(z1z1), long_range_pair.state), z1z1))[0, 0]
-        self.correlations_z_list += [correlations_z]
-
-        x0x0 = mat.tensor(mat.x0, mat.x0)
-        x1x1 = mat.tensor(mat.x1, mat.x1)
-        correlations_x = np.real_if_close(np.dot(np.dot(mat.H(x0x0), long_range_pair.state), x0x0)[0, 0] + np.dot(np.dot(mat.H(x1x1), long_range_pair.state), x1x1))[0, 0]
-        self.correlations_x_list += [correlations_x]
-
-        self.resource_cost_max_list += [long_range_pair.resource_cost_max]
-        return
-
     def check(self, message=None):
         """Checks world state and schedules new events.
-
-        Summary of the Protocol:
-        Establish a left link and a right link.
-        Then perform entanglement swapping.
-        Record metrics about the long distance pair.
-        Repeat.
-        However, sometimes pairs will be discarded because of memory cutoff
-        times, which means we need to check regularly if that happened.
 
         Returns
         -------
@@ -195,97 +73,115 @@ class TwoLinkOneStepEPP(MessageReadingProtocol):
 
         """
         try:
-            pairs = self.world.world_objects["Pair"]
+            all_pairs = self.world.world_objects["Pair"]
         except KeyError:
-            pairs = []
+            all_pairs = []
 
         if message is not None and message["event_type"] == "EntanglementPurificationEvent":
             if message["is_successful"]:
                 self.epp_tracking[message["output_pair"]] += 1
 
         for pair in list(self.epp_tracking):
-            if pair not in pairs:
+            if pair not in all_pairs:
                 self.epp_tracking.pop(pair)
 
         left_pairs = self._get_left_pairs()
         num_left_pairs = len(left_pairs)
         right_pairs = self._get_right_pairs()
         num_right_pairs = len(right_pairs)
-        # schedule pair creation if there is no pair and pair creation is not already scheduled
-        if num_left_pairs == 0 and not self._left_pair_is_scheduled():
-            self.source_A.schedule_event()
-        elif num_left_pairs == 1:
-            pair = left_pairs[0]
-            if self.epp_tracking[pair] == 0 and not self._left_pair_is_scheduled():
+        num_left_pairs_scheduled = len(self._left_pairs_scheduled())
+        num_right_pairs_scheduled = len(self._right_pairs_scheduled())
+        left_used = num_left_pairs + num_left_pairs_scheduled
+        right_used = num_right_pairs + num_right_pairs_scheduled
+        # schedule pair creation if a memory is not busy
+        if left_used < self.num_memories:
+            for _ in range(self.num_memories - left_used):
                 self.source_A.schedule_event()
-            else:
-                pass  # just wait for right pair
-        elif num_left_pairs == 2 and not self._left_epp_is_scheduled():
-            # DO entanglement purification
-            epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time, pairs=left_pairs, protocol="dejmps")
-            self.world.event_queue.add_event(epp_event)
-
-        if num_right_pairs == 0 and not self._right_pair_is_scheduled():
-            self.source_B.schedule_event()
-        elif num_right_pairs == 1:
-            pair = right_pairs[0]
-            if self.epp_tracking[pair] == 0 and not self._right_pair_is_scheduled():
+        if right_used < self.num_memories:
+            for _ in range(self.num_memories - right_used):
                 self.source_B.schedule_event()
-            else:
-                pass  # just wait for left pair
-        elif num_right_pairs == 2 and not self._right_epp_is_scheduled():
-            # DO entanglement purification
-            epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time, pairs=right_pairs, protocol="dejmps")
-            self.world.event_queue.add_event(epp_event)
 
-        ent_swap_condition = (num_left_pairs == 1 and not left_pairs[0].is_blocked and self.epp_tracking[left_pairs[0]] == 1
-                              and num_right_pairs == 1 and not right_pairs[0].is_blocked and self.epp_tracking[right_pairs[0]] == 1
-                              )
-        if ent_swap_condition:
-            ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time, pairs=[left_pairs[0], right_pairs[0]])
-            # print("an entswap event was scheduled at %.8f while event_queue looked like this:" % self.world.event_queue.current_time, self.world.event_queue.queue)
-            self.world.event_queue.add_event(ent_swap_event)
-            return
+        # check for epp
+        if num_left_pairs >= 2 and not self._left_epp_is_scheduled():
+            # group pairs by epp step
+            staged_pairs = defaultdict(list)
+            for pair in left_pairs:
+                if not pair.is_blocked:
+                    steps = self.epp_tracking[pair]
+                    staged_pairs[steps] += [pair]
+            # find purifiable pairs at same recurrence level
+            for steps, pairs in staged_pairs.items():
+                if len(pairs) >= 2 and steps < self.epp_steps:
+                    epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
+                                                              pairs=pairs[0:2],
+                                                              protocol="dejmps")
+                    self.world.event_queue.add_event(epp_event)
+
+        if num_right_pairs >= 2 and not self._right_epp_is_scheduled():
+            # group pairs by epp step
+            staged_pairs = defaultdict(list)
+            for pair in right_pairs:
+                if not pair.is_blocked:
+                    steps = self.epp_tracking[pair]
+                    staged_pairs[steps] += [pair]
+            # find purifiable pairs at same recurrence level
+            for steps, pairs in staged_pairs.items():
+                if len(pairs) >= 2 and steps < self.epp_steps:
+                    epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
+                                                              pairs=pairs[0:2],
+                                                              protocol="dejmps")
+                    self.world.event_queue.add_event(epp_event)
+
+        # check for swapping
+        if num_left_pairs >= 1 and num_right_pairs >= 1:
+            left_swap_ready = list(filter(lambda x: self.epp_tracking[x] == self.epp_steps and not x.is_blocked, left_pairs))
+            right_swap_ready = list(filter(lambda x: self.epp_tracking[x] == self.epp_steps and not x.is_blocked, right_pairs))
+            if left_swap_ready and right_swap_ready:
+                left_pair = left_swap_ready[0]
+                right_pair = right_swap_ready[0]
+                # assert that we do not schedule the same swapping more than once
+                try:
+                    next(filter(lambda event: (isinstance(event, EntanglementSwappingEvent)
+                                               and (left_pair in event.pairs)
+                                               and (right_pair in event.pairs)
+                                               ),
+                                self.world.event_queue.queue))
+                    is_already_scheduled = True
+                except StopIteration:
+                    is_already_scheduled = False
+                if not is_already_scheduled:
+                    ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time,
+                                                               pairs=[left_pair, right_pair])
+                    self.world.event_queue.add_event(ent_swap_event)
+
         long_range_pairs = self._get_long_range_pairs()
-        if long_range_pairs:
-            long_range_pair = long_range_pairs[0]
+        for long_range_pair in long_range_pairs:
             self._eval_pair(long_range_pair)
             # cleanup
             long_range_pair.qubits[0].destroy()
             long_range_pair.qubits[1].destroy()
             long_range_pair.destroy()
-            self.check()
-            return
+
         if not self.world.event_queue.queue:
             warn("Protocol may be stuck in a state without events.")
 
 
-def run(length, max_iter, params, cutoff_time=None, mode="sim"):
+def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1):
+    allowed_params = ["P_LINK", "T_P", "E_MA", "P_D", "LAMBDA_BSM", "F_INIT", "T_DP"]
+    for key in params:
+        if key not in allowed_params:
+            warn(f"params[{key}] is not a supported parameter and will be ignored.")
     # unpack the parameters
-    try:
-        P_LINK = params["P_LINK"]
-    except KeyError:
-        P_LINK = 1.0
-    try:
-        T_P = params["T_P"]  # preparation time
-    except KeyError:
-        T_P = 0
+    P_LINK = params.get("P_LINK", 1.0)
+    T_P = params.get("T_P", 0)  # preparation time
+    E_MA = params.get("E_MA", 0)  # misalignment error
+    P_D = params.get("P_D", 0)  # dark count probability
+    LAMBDA_BSM = params.get("LAMBDA_BSM", 1)
+    F_INIT = params.get("F_INIT", 1.0)  # initial fidelity of created pairs
     try:
         T_DP = params["T_DP"]  # dephasing time
-    except KeyError:
-        T_DP = 1.0
-    try:
-        E_MA = params["E_MA"]  # misalignment error
-    except KeyError:
-        E_MA = 0
-    try:
-        P_D = params["P_D"]  # dark count probability
-    except KeyError:
-        P_D = 0
-    try:
-        LAMBDA_BSM = params["LAMBDA_BSM"]
-    except KeyError:
-        LAMBDA_BSM = 1
+    except KeyError as e:
+        raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
 
     def imperfect_bsm_err_func(four_qubit_state):
         return LAMBDA_BSM * four_qubit_state + (1 - LAMBDA_BSM) * mat.reorder(mat.tensor(mat.ptrace(four_qubit_state, [1, 2]), mat.I(4) / 4), [0, 2, 3, 1])
@@ -300,7 +196,11 @@ def run(length, max_iter, params, cutoff_time=None, mode="sim"):
         return random_num * trial_time, random_num
 
     def state_generation(source):
-        state = np.dot(mat.phiplus, mat.H(mat.phiplus))
+        state = F_INIT * (mat.phiplus @ mat.H(mat.phiplus)) + \
+                (1 - F_INIT) / 3 * (mat.psiplus @ mat.H(mat.psiplus) +
+                                    mat.phiminus @ mat.H(mat.phiminus) +
+                                    mat.psiminus @ mat.H(mat.psiminus)
+                                    )
         comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
         storage_time = 2 * comm_distance / C
         for idx, station in enumerate(source.target_stations):
@@ -318,18 +218,18 @@ def run(length, max_iter, params, cutoff_time=None, mode="sim"):
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
-    station_B = Station(world, position=length, memory_noise=None,
-                        creation_noise_channel=misalignment_noise,
-                        dark_count_probability=P_D
-                        )
-    station_central = Station(world, id=2, position=length / 2,
+    station_central = Station(world, position=length / 2,
                               memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP),
                               memory_cutoff_time=cutoff_time,
                               BSM_noise_model=NoiseModel(channel_before=NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func))
                               )
+    station_B = Station(world, position=length, memory_noise=None,
+                        creation_noise_channel=misalignment_noise,
+                        dark_count_probability=P_D
+                        )
     source_A = SchedulingSource(world, position=length / 2, target_stations=[station_A, station_central], time_distribution=time_distribution, state_generation=state_generation)
     source_B = SchedulingSource(world, position=length / 2, target_stations=[station_central, station_B], time_distribution=time_distribution, state_generation=state_generation)
-    protocol = TwoLinkOneStepEPP(world)
+    protocol = TwoLinkOneStepEPP(world, num_memories=num_memories, epp_steps=epp_steps)
     protocol.setup()
 
     current_message = None
@@ -341,4 +241,5 @@ def run(length, max_iter, params, cutoff_time=None, mode="sim"):
 
 
 if __name__ == "__main__":
-    run(length=22000, max_iter=100, params={}, mode="sim")
+    res = run(length=22000, max_iter=100, params={"T_DP": 1.0, "F_INIT": 0.8}, num_memories=2, epp_steps=1)
+    print(res.data)
