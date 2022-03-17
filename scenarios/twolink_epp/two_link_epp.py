@@ -241,5 +241,5 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
 
 
 if __name__ == "__main__":
-    res = run(length=22000, max_iter=100, params={"T_DP": 1.0, "F_INIT": 0.8}, num_memories=2, epp_steps=1)
+    res = run(length=22000, max_iter=100, params={"P_LINK": 0.5, "T_DP": 0.2, "F_INIT": 0.95}, num_memories=2, epp_steps=1)
     print(res.data)
