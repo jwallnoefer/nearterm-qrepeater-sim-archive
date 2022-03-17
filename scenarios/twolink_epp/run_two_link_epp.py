@@ -34,7 +34,7 @@ if __name__ == "__main__":
             raise ValueError("If not in --collect mode, `part` must be specified.")
         output_path = os.path.join(args.result_path, "parts")
         run_args = case_definition.case_args(case=args.case, part=args.part)
-        with open(os.path.join(output_path, f"part{args.part}.log"), w) as f:
+        with open(os.path.join(output_path, f"part{args.part}.log"), "w") as f:
             print(run_args, file=f)
         res = run_epp(**run_args).data
         res.to_pickle(os.path.join(output_path, f"part{args.part}.bz2"))
