@@ -6,6 +6,7 @@ import os, sys; sys.path.insert(0, os.path.abspath("."))
 import subprocess
 import argparse
 import scenarios.twolink_epp.case_definition as case_definition
+import re
 from libs.aux_functions import assert_dir
 
 email = "julius.wallnoefer@fu-berlin.de"
@@ -41,7 +42,7 @@ if __name__ == "__main__":
 #SBATCH --time={args.time}              # Runtime in DAYS-HH:MM:SS format
 #SBATCH --mem-per-cpu={args.mem}              # Memory per cpu in MB (see also --mem)
 #SBATCH --array={parts}
-#SBATCH --output=out_files/$x_%a.out           # File to which standard out will be written
+#SBATCH --output=out_files/%x_%a.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x_%a.err            # File to which standard err will be written
 #SBATCH --mail-type=ALL                # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user={email}   # Email to which notifications will be sent
@@ -74,7 +75,7 @@ pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case
 #SBATCH --nodes=1                      # Ensure that all cores are on one machine
 #SBATCH --time=0-00:20:00            # Runtime in DAYS-HH:MM:SS format
 #SBATCH --mem-per-cpu={args.memcollect}              # Memory per cpu in MB (see also --mem)
-#SBATCH --output=out_files/$x.out           # File to which standard out will be written
+#SBATCH --output=out_files/%x.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x.err            # File to which standard err will be written
 #SBATCH --mail-type=ALL                # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user={email}   # Email to which notifications will be sent
