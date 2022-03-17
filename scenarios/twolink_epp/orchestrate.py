@@ -1,4 +1,4 @@
-case_path"""Orchestrate a case with slurm jobs.
+"""Orchestrate a case with slurm jobs.
 
 This will setup all the necessary slurm jobs that will complete the run.
 """
