@@ -24,7 +24,7 @@ if __name__ == "__main__":
     case_name = case_definition.name(case)
     case_path = os.path.join(base_path, case_name)
     subcase_name = case_definition.subcase_name(case)
-    subcase_path = os.path.join(case_path, subcase_path)
+    subcase_path = os.path.join(case_path, subcase_name)
     job_name = subcase_name + "_" + case_name
     if args.parts is None:
         nparts = case_definition.num_parts(case)
@@ -54,7 +54,7 @@ scontrol show job $SLURM_JOBID
 pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case} $SLURM_ARRAY_TASK_ID
 """
     assert_dir("out_files")
-    assert_dir(result_path)
+    assert_dir(case_path)
     assert_dir(subcase_path)
     assert_dir(os.path.join(subcase_path, "parts"))
     sbatch_file = os.path.join(subcase_path, f"run_case_{case}.sh")
