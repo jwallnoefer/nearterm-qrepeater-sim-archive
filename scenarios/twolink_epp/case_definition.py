@@ -2,15 +2,15 @@
 import numpy as np
 
 # CASE 0
-num_parts_0 = 10
-lengths = np.linspace(1, 22e3, num=num_parts_0)
+num_parts_0 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_0)
 case_0_specification = {
     "name": "test_case",
     "subcase_name": "by_length",
     "num_parts": num_parts_0,
     "index": lengths,
     "case_args": {part: {"length": lengths[part],
-                         "max_iter": 1e3,
+                         "max_iter": 1e5,
                          "params": {"P_LINK": 0.5,
                                     "T_DP": 0.2,
                                     "F_INIT": 0.95
