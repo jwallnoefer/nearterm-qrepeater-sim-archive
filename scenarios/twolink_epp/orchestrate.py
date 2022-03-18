@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--time", required=True, help="specify time in DAYS-HH:MM:SS format")
     parser.add_argument("--parts", help="optionally, specify just some parts using sbatch --array syntax. Default: run all")
     parser.add_argument("--mem", default=2048, help="memory in MB per part run")
-    parser.add_argument("--memcollect", default=10240, help="memory in MB for result collection step")
+    parser.add_argument("--memcollect", default="32G", help="memory in MB for result collection step")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
