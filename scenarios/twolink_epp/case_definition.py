@@ -39,9 +39,31 @@ case_1_specification = {
                   }
 }
 
+# CASE 2
+# check if the no-epp option works correctly
+num_parts_2 = 128
+lengths = lengths = np.linspace(1, 250e3, num=num_parts_2)
+case_2_specification = {
+    "name": "no_epp",
+    "subcase_name": "epp_steps_0",
+    "num_parts": num_parts_2,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 0.2,
+                                    "F_INIT": 1.0
+                                    },
+                         "epp_steps": 0
+                         }
+                  for part in range(num_parts_2)
+                  }
+}
+
 cases = {
     0: case_0_specification,
-    1: case_1_specification
+    1: case_1_specification,
+    2: case_2_specification,
 }
 
 
