@@ -60,10 +60,54 @@ case_2_specification = {
                   }
 }
 
+
+# # now check the opposite cases where initial fidelity is low, but memories are good
+# CASE 3
+num_parts_3 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_3)
+case_3_specification = {
+    "name": "low_fid",
+    "subcase_name": "with_epp",
+    "num_parts": num_parts_3,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93,
+                                    }
+                         }
+                  for part in range(num_parts_3)
+                  }
+}
+
+# CASE 4
+num_parts_4 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_4)
+case_4_specification = {
+    "name": "low_fid",
+    "subcase_name": "without_epp",
+    "num_parts": num_parts_4,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "epp_steps": 0
+                         }
+                  for part in range(num_parts_4)
+                  }
+}
+
+
 cases = {
     0: case_0_specification,
     1: case_1_specification,
     2: case_2_specification,
+    3: case_3_specification,
+    4: case_4_specification
 }
 
 
