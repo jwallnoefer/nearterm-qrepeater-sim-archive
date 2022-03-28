@@ -20,15 +20,15 @@ if __name__ == "__main__":
     if args.collect:
         base_index = case_definition.index(args.case)
         index = []
-        results = []
+        results = pd.DataFrame()
         for part in range(case_definition.num_parts(args.case)):
             try:
-                results.append(pd.read_pickle(os.path.join(args.result_path, "parts", f"part{part}.bz2")))
+                results = pd.concat([results, pd.read_csv(os.path.join(output_path, f"part{args.part}.csv"))])
             except FileNotFoundError:
                 continue
             index.append(base_index[part])
-        data_series = pd.Series(results, index=index)
-        save_result(data_series=data_series, output_path=args.result_path)
+        results.index = index
+        results.save_csv(os.path.join(args.result_path, "result.csv"))
     else:
         if args.part is None:
             raise ValueError("If not in --collect mode, `part` must be specified.")
@@ -38,3 +38,7 @@ if __name__ == "__main__":
             print(run_args, file=f)
         res = run_epp(**run_args).data
         res.to_pickle(os.path.join(output_path, f"part{args.part}.bz2"))
+        evaluated_res = pd.DataFrame([standard_bipartite_evaluation(res)],
+                                     columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"]
+                                     )
+        evaluated_res.to_csv(os.path.join(output_path, f"part{args.part}.csv"), index=False)

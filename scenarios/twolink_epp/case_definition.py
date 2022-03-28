@@ -101,13 +101,34 @@ case_4_specification = {
                   }
 }
 
+# CASE 5
+num_parts_5 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_5)
+case_5_specification = {
+    "name": "low_fid",
+    "subcase_name": "with_2_epp",
+    "num_parts": num_parts_5,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "epp_steps": 0
+                         }
+                  for part in range(num_parts_5)
+                  }
+}
+
 
 cases = {
     0: case_0_specification,
     1: case_1_specification,
     2: case_2_specification,
     3: case_3_specification,
-    4: case_4_specification
+    4: case_4_specification,
+    5: case_5_specification,
 }
 
 
