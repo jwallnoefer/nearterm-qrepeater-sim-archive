@@ -228,7 +228,14 @@ case_10_specification = {
 }
 
 
-cases = {case: eval(f"case_{case}_specification") for case in range(8)}
+cases = {}
+case_counter = 0
+while True:
+    try:
+        cases.update({case: eval(f"case_{case_counter}_specification")})
+    except NameError:
+        break
+    case_counter += 1
 
 
 def case_args(case, part):
