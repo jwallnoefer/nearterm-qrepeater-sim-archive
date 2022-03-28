@@ -23,7 +23,7 @@ if __name__ == "__main__":
         results = pd.DataFrame()
         for part in range(case_definition.num_parts(args.case)):
             try:
-                results = pd.concat([results, pd.read_csv(os.path.join(args.result_path, f"{part}", f"part{args.part}.csv"))])
+                results = pd.concat([results, pd.read_csv(os.path.join(args.result_path, "parts", f"part{args.part}.csv"))])
             except FileNotFoundError:
                 continue
             index.append(base_index[part])
