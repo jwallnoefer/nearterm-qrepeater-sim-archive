@@ -122,7 +122,7 @@ case_5_specification = {
                   }
 }
 
-# CASE 5
+# CASE 6
 num_parts_6 = 128
 lengths = np.linspace(1, 250e3, num=num_parts_6)
 case_6_specification = {
@@ -161,6 +161,69 @@ case_7_specification = {
                          "epp_steps": 2,
                          }
                   for part in range(num_parts_7)
+                  }
+}
+
+# CASE 8
+num_parts_8 = 128
+lengths = np.linspace(1, 350e3, num=num_parts_8)
+case_8_specification = {
+    "name": "memories_100",
+    "subcase_name": "without_epp",
+    "num_parts": num_parts_8,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 0,
+                         }
+                  for part in range(num_parts_8)
+                  }
+}
+
+# CASE 9
+num_parts_9 = 128
+lengths = np.linspace(1, 350e3, num=num_parts_9)
+case_9_specification = {
+    "name": "memories_100",
+    "subcase_name": "with_epp",
+    "num_parts": num_parts_9,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 1,
+                         }
+                  for part in range(num_parts_9)
+                  }
+}
+
+# CASE 10
+num_parts_10 = 128
+lengths = np.linspace(1, 350e3, num=num_parts_10)
+case_10_specification = {
+    "name": "memories_100",
+    "subcase_name": "with_2_epp",
+    "num_parts": num_parts_10,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 2,
+                         }
+                  for part in range(num_parts_10)
                   }
 }
 
