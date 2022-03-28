@@ -232,7 +232,7 @@ cases = {}
 case_counter = 0
 while True:
     try:
-        cases.update({case: eval(f"case_{case_counter}_specification")})
+        cases.update({case_counter: eval(f"case_{case_counter}_specification")})
     except NameError:
         break
     case_counter += 1
