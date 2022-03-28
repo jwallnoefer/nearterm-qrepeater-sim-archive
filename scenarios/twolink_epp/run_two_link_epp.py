@@ -28,7 +28,7 @@ if __name__ == "__main__":
                 continue
             index.append(base_index[part])
         results.index = index
-        results.save_csv(os.path.join(args.result_path, "result.csv"))
+        results.to_csv(os.path.join(args.result_path, "result.csv"))
     else:
         if args.part is None:
             raise ValueError("If not in --collect mode, `part` must be specified.")
