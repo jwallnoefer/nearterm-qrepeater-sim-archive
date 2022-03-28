@@ -105,8 +105,8 @@ case_4_specification = {
 num_parts_5 = 128
 lengths = np.linspace(1, 250e3, num=num_parts_5)
 case_5_specification = {
-    "name": "low_fid",
-    "subcase_name": "with_2_epp",
+    "name": "memories_4",
+    "subcase_name": "without_epp",
     "num_parts": num_parts_5,
     "index": lengths,
     "case_args": {part: {"length": lengths[part],
@@ -115,21 +115,57 @@ case_5_specification = {
                                     "T_DP": 100,
                                     "F_INIT": 0.93
                                     },
-                         "epp_steps": 0
+                         "num_memories": 4,
+                         "epp_steps": 0,
                          }
                   for part in range(num_parts_5)
                   }
 }
 
-
-cases = {
-    0: case_0_specification,
-    1: case_1_specification,
-    2: case_2_specification,
-    3: case_3_specification,
-    4: case_4_specification,
-    5: case_5_specification,
+# CASE 5
+num_parts_6 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_6)
+case_6_specification = {
+    "name": "memories_4",
+    "subcase_name": "with_epp",
+    "num_parts": num_parts_6,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "num_memories": 4,
+                         "epp_steps": 1,
+                         }
+                  for part in range(num_parts_6)
+                  }
 }
+
+# CASE 7
+num_parts_7 = 128
+lengths = np.linspace(1, 250e3, num=num_parts_7)
+case_7_specification = {
+    "name": "memories_4",
+    "subcase_name": "with_2_epp",
+    "num_parts": num_parts_7,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100,
+                                    "F_INIT": 0.93
+                                    },
+                         "num_memories": 4,
+                         "epp_steps": 2,
+                         }
+                  for part in range(num_parts_7)
+                  }
+}
+
+
+cases = {case: eval(f"case_{case}_specification") for case in range(8)}
 
 
 def case_args(case, part):
