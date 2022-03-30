@@ -166,7 +166,7 @@ case_7_specification = {
 
 # CASE 8
 num_parts_8 = 128
-lengths = np.linspace(1, 350e3, num=num_parts_8)
+lengths = np.linspace(1, 700e3, num=num_parts_8)
 case_8_specification = {
     "name": "memories_100",
     "subcase_name": "without_epp",
@@ -187,7 +187,7 @@ case_8_specification = {
 
 # CASE 9
 num_parts_9 = 128
-lengths = np.linspace(1, 350e3, num=num_parts_9)
+lengths = np.linspace(1, 700e3, num=num_parts_9)
 case_9_specification = {
     "name": "memories_100",
     "subcase_name": "with_epp",
@@ -208,7 +208,7 @@ case_9_specification = {
 
 # CASE 10
 num_parts_10 = 128
-lengths = np.linspace(1, 350e3, num=num_parts_10)
+lengths = np.linspace(1, 700e3, num=num_parts_10)
 case_10_specification = {
     "name": "memories_100",
     "subcase_name": "with_2_epp",
@@ -236,6 +236,8 @@ while True:
     except NameError:
         break
     case_counter += 1
+
+num_cases = len(cases)
 
 
 def case_args(case, part):
