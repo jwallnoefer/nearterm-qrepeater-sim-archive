@@ -90,7 +90,7 @@ pipenv run python scenarios/twolink_epp/run_two_link_epp.py --collect {subcase_p
     collect_file = os.path.join(subcase_path, f"collect_case_{case}.sh")
     with open(collect_file, "w") as f:
         f.write(collect_text)
-    submit2 = subprocess.run(["sbatch", f"--dependency=afterok:{jid1}", "--deadline=now+14days", collect_file], capture_output=True)
+    submit2 = subprocess.run(["sbatch", f"--dependency=afterany:{jid1}", "--deadline=now+14days", collect_file], capture_output=True)
     out2 = submit2.stdout.decode("ascii")
     err2 = submit2.stderr.decode("ascii")
     if err2:
