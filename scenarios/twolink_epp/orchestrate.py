@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--time", required=True, help="specify time in DAYS-HH:MM:SS format")
     parser.add_argument("--parts", help="optionally, specify just some parts using sbatch --array syntax. Default: run all")
     parser.add_argument("--mem", default=2048, help="memory in MB per part run")
-    parser.add_argument("--memcollect", default="32G", help="memory in MB for result collection step")
+    parser.add_argument("--memcollect", default=1024, help="memory in MB for result collection step")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
@@ -73,7 +73,7 @@ pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case
 #SBATCH --job-name=c_{job_name}     # Job name, will show up in squeue output
 #SBATCH --ntasks=1                     # Number of cores
 #SBATCH --nodes=1                      # Ensure that all cores are on one machine
-#SBATCH --time=0-00:20:00            # Runtime in DAYS-HH:MM:SS format
+#SBATCH --time=0-00:05:00            # Runtime in DAYS-HH:MM:SS format
 #SBATCH --mem-per-cpu={args.memcollect}              # Memory per cpu in MB (see also --mem)
 #SBATCH --output=out_files/%x.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x.err            # File to which standard err will be written
@@ -90,8 +90,8 @@ pipenv run python scenarios/twolink_epp/run_two_link_epp.py --collect {subcase_p
     collect_file = os.path.join(subcase_path, f"collect_case_{case}.sh")
     with open(collect_file, "w") as f:
         f.write(collect_text)
-    submit2 = subprocess.run(["sbatch", f"--dependency=afterok:{jid1}", "--deadline=now+14days", collect_file])
-    out2 = submit1.stdout.decode("ascii")
-    err2 = submit1.stderr.decode("ascii")
+    submit2 = subprocess.run(["sbatch", f"--dependency=afterok:{jid1}", "--deadline=now+14days", collect_file], capture_output=True)
+    out2 = submit2.stdout.decode("ascii")
+    err2 = submit2.stderr.decode("ascii")
     if err2:
         raise RuntimeError(err2)
