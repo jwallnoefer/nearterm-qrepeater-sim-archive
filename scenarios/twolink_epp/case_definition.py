@@ -483,6 +483,70 @@ case_22_specification = {
 }
 
 
+# CASE 23
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_23_specification = {
+    "name": "memories_100_tdp_100_f_96",
+    "subcase_name": "0_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.96
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 0,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
+# CASE 24
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_24_specification = {
+    "name": "memories_100_tdp_100_f_96",
+    "subcase_name": "1_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.96
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 1,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
+# CASE 25
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_25_specification = {
+    "name": "memories_100_tdp_100_f_96",
+    "subcase_name": "2_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.96
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 2,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
+
 
 cases = {}
 case_counter = 0
