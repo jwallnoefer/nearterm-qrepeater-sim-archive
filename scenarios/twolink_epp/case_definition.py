@@ -369,7 +369,7 @@ case_17_specification = {
                                     "F_INIT": 0.95
                                     },
                          "num_memories": 100,
-                         "epp_steps": 1,
+                         "epp_steps": 0,
                          }
                   for part in range(num_parts)
                   }
@@ -379,7 +379,7 @@ case_17_specification = {
 num_parts = 128
 lengths = np.linspace(1, 300e3, num=num_parts)
 case_18_specification = {
-    "name": "memories_100_tdp_100",
+    "name": "memories_100_tdp_100_f_95",
     "subcase_name": "1_epp",
     "num_parts": num_parts,
     "index": lengths,
@@ -401,7 +401,7 @@ case_18_specification = {
 num_parts = 128
 lengths = np.linspace(1, 300e3, num=num_parts)
 case_19_specification = {
-    "name": "memories_100_tdp_100",
+    "name": "memories_100_tdp_100_f_95",
     "subcase_name": "2_epp",
     "num_parts": num_parts,
     "index": lengths,
@@ -417,6 +417,71 @@ case_19_specification = {
                   for part in range(num_parts)
                   }
 }
+
+
+# CASE 20
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_20_specification = {
+    "name": "memories_100_tdp_100_f_94",
+    "subcase_name": "0_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.94
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 0,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
+# CASE 21
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_21_specification = {
+    "name": "memories_100_tdp_100_f_94",
+    "subcase_name": "1_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.94
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 1,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
+# CASE 22
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+case_22_specification = {
+    "name": "memories_100_tdp_100_f_94",
+    "subcase_name": "2_epp",
+    "num_parts": num_parts,
+    "index": lengths,
+    "case_args": {part: {"length": lengths[part],
+                         "max_iter": 1e5,
+                         "params": {"P_LINK": 0.5,
+                                    "T_DP": 100e-3,
+                                    "F_INIT": 0.94
+                                    },
+                         "num_memories": 100,
+                         "epp_steps": 2,
+                         }
+                  for part in range(num_parts)
+                  }
+}
+
 
 
 cases = {}
