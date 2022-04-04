@@ -176,7 +176,7 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
     T_P = params.get("T_P", 0)  # preparation time
     E_MA = params.get("E_MA", 0)  # misalignment error
     P_D = params.get("P_D", 0)  # dark count probability
-    LAMBDA_BSM = params.get("LAMBDA_BSM", 1)
+    LAMBDA_BSM = params.get("LAMBDA_BSM", 1)  # Bell state measurement ideality parameter
     F_INIT = params.get("F_INIT", 1.0)  # initial fidelity of created pairs
     try:
         T_DP = params["T_DP"]  # dephasing time
