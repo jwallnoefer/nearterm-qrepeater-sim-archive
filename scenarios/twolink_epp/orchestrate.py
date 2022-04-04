@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--parts", help="optionally, specify just some parts using sbatch --array syntax. Default: run all")
     parser.add_argument("--mem", default=2048, help="memory in MB per part run")
     parser.add_argument("--memcollect", default=1024, help="memory in MB for result collection step")
+    parser.add_argument("--mailtype", default="ALL", help="mail-type option for sbatch. Default: ALL")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 #SBATCH --array={parts}
 #SBATCH --output=out_files/%x_%a.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x_%a.err            # File to which standard err will be written
-#SBATCH --mail-type=ALL                # Type of email notification- BEGIN,END,FAIL,ALL
+#SBATCH --mail-type={args.mailtype}                # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user={email}   # Email to which notifications will be sent
 #SBATCH --qos=standard
 
@@ -77,7 +78,7 @@ pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case
 #SBATCH --mem-per-cpu={args.memcollect}              # Memory per cpu in MB (see also --mem)
 #SBATCH --output=out_files/%x.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x.err            # File to which standard err will be written
-#SBATCH --mail-type=ALL                # Type of email notification- BEGIN,END,FAIL,ALL
+#SBATCH --mail-type={args.mailtype}                # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user={email}   # Email to which notifications will be sent
 #SBATCH --qos=standard
 
