@@ -19,7 +19,7 @@ for case in no_epp_cases:
                     f"{case}"])
 
 
-for case in no_epp_cases:
+for case in epp_cases:
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
                     "--time", "0-00:45:00", "--mailtype", "FAIL",
