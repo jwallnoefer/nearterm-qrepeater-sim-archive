@@ -5,8 +5,8 @@ import numpy as np
 path = os.path.join("scenarios", "twolink_epp")
 
 # schedules the cases of 2dplots in
-no_epp_cases = np.arange(6, 10)
-epp_cases = np.arange(10, 14)
+no_epp_cases = np.arange(6, 69)
+epp_cases = np.arange(69, 132)
 
 
 with open("environment_setup.txt", "r") as f:
