@@ -24,15 +24,18 @@ for case in no_epp_cases:
                     os.path.join(path, "orchestrate.py"),
                     "--time", "0-00:30:00", "--mailtype", "FAIL",
                     "--bundle", "8", f"{case}"])
+    print(f"Finished submitting case {case}.")
     sleep(10)
 
 
 for case in epp_cases:
     case_path = os.path.join(result_path, case_definition.name(case), case_definition.subcase_name(case), "result.csv")
     if os.path.exists(case_path):
+        print(f"skipping case {case} with subcase name {case_definition.subcase_name(case)}; result.csv already exists" )
         continue
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
                     "--time", "0-00:45:00", "--mailtype", "FAIL",
                     "--bundle", "4", f"{case}"])
+    print(f"Finished submitting case {case}.")
     sleep(10)
