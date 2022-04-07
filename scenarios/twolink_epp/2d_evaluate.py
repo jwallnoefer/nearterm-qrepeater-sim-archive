@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.join("results", "twolink_epp")
 
-no_epp_cases = np.arange(6, 69)
-epp_cases = np.arange(69, 132)
+no_epp_cases = np.arange(6, 227)
+epp_cases = np.arange(227, 448)
 
 
 def is_always_better(no_epp_data, epp_data):
@@ -56,10 +56,8 @@ for no_epp_case, epp_case in zip(no_epp_cases, epp_cases):
     #       extends_range(no_epp_data, epp_data))
 
 
-fidelities = [0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00]
-memory_times = np.logspace(-3, 0, num=7)  # 1 ms to 1 second
-# fidelities = [0.93, 0.96]
-# memory_times = [10e-3, 100e-3]
+fidelities = np.linspace(0.92, 1.00, num=17)
+memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 
 res_better = np.array(res_better, dtype=int).reshape((len(fidelities), len(memory_times)))
 res_extend = np.array(res_extend, dtype=int).reshape((len(fidelities), len(memory_times)))

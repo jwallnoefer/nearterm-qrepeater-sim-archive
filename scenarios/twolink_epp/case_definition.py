@@ -146,10 +146,8 @@ cases.update({len(cases): case_specification})
 
 # # now start developing code for a 2d plot
 start_case = 6
-fidelities = [0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00]
-memory_times = np.logspace(-3, 0, num=7)  # 1 ms to 1 second
-# fidelities = [0.93, 0.96]
-# memory_times = [10e-3, 100e-3]
+fidelities = np.linspace(0.92, 1.00, num=17)
+memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
 lengths = np.linspace(1, 300e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
@@ -176,11 +174,9 @@ if __name__ == "__main__":
     print("case_count after 2d", len(cases))
 
 # # now start developing code for a 2d plot
-start_case = len(cases)  # currently 69
-fidelities = [0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00]
-memory_times = np.logspace(-3, 0, num=7)  # 1 ms to 1 second
-# fidelities = [0.93, 0.96]
-# memory_times = [10e-3, 100e-3]
+start_case = len(cases)  # currently 227
+fidelities = np.linspace(0.92, 1.00, num=17)
+memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
 lengths = np.linspace(1, 300e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
@@ -204,7 +200,7 @@ for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities,
     }
     cases.update({case: case_specification})
 if __name__ == "__main__":
-    print("case_count after epp", len(cases))  # 132
+    print("case_count after epp", len(cases))  # 448
 
 
 num_cases = len(cases)
