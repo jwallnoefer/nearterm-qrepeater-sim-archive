@@ -153,7 +153,7 @@ lengths = np.linspace(1, 300e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": "2d_plot_100_memories",
-        "subcase_name": f"f{int(fid * 100)}_tdp{memory_time * 1e3:.2f}",
+        "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
         "num_parts": num_parts,
         "index": lengths,
         "case_args": {part: {"length": lengths[part],
@@ -182,7 +182,7 @@ lengths = np.linspace(1, 300e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": "2d_plot_100_memories",
-        "subcase_name": f"epp_f{int(fid * 100)}_tdp{memory_time * 1e3:.2f}",
+        "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
         "num_parts": num_parts,
         "index": lengths,
         "case_args": {part: {"length": lengths[part],
