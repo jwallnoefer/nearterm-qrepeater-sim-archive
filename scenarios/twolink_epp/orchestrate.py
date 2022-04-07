@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("--mem", default=2048, help="memory in MB per part run")
     parser.add_argument("--memcollect", default=1024, help="memory in MB for result collection step")
     parser.add_argument("--mailtype", default="ALL", help="mail-type option for sbatch. Default: ALL")
+    parser.add_argument("--bundle", type=int, default=1, help="how many parts to bundle in one slurm job, works only if --parts is not specified and the number of all parts is divisible by bundle")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
@@ -30,11 +31,22 @@ if __name__ == "__main__":
     job_name = subcase_name + "_" + case_name
     if args.parts is None:
         nparts = case_definition.num_parts(case)
-        parts = f"0-{nparts - 1}"
+        if nparts % args.bundle != 0:
+            raise ValueError(f"The number of parts {nparts} must be divisible by --bundle {args.bundle}")
+        num_array_jobs = nparts // args.bundle
+        array_entry = f"0-{num_array_jobs - 1}"
     else:
-        parts = args.parts
+        if args.bundle != 1:
+            raise ValueError(f"--bundle only works if --parts is not specified. Was called with --bundle {bundle} and --parts {args.parts}")
+        array_entry = args.parts
     with open("environment_setup.txt", "r") as f:
         environment_setup_string = f.read()
+    run_string = f"pipenv run python scenarios/twolink_epp/run_two_link_epp.py {case} {subcase_name}"
+    if args.bundle == 1:
+        run_instructions = f"{run_string} $SLURM_ARRAY_TASK_ID"
+    else:
+        run_instructions = "\n".join([f"{run_string} $(({args.bundle} * $SLURM_ARRAY_TASK_ID + {i}))" for i in range(args.bundle)])
+
     sbatch_text = f"""#!/bin/bash
 
 #SBATCH --job-name={job_name}     # Job name, will show up in squeue output
@@ -42,7 +54,7 @@ if __name__ == "__main__":
 #SBATCH --nodes=1                      # Ensure that all cores are on one machine
 #SBATCH --time={args.time}              # Runtime in DAYS-HH:MM:SS format
 #SBATCH --mem-per-cpu={args.mem}              # Memory per cpu in MB (see also --mem)
-#SBATCH --array={parts}
+#SBATCH --array={array_entry}
 #SBATCH --output=out_files/%x_%a.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x_%a.err            # File to which standard err will be written
 #SBATCH --mail-type={args.mailtype}                # Type of email notification- BEGIN,END,FAIL,ALL
@@ -53,7 +65,7 @@ if __name__ == "__main__":
 scontrol show job $SLURM_JOBID
 
 {environment_setup_string}
-pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case} $SLURM_ARRAY_TASK_ID
+{run_instructions}
 """
     assert_dir("out_files")
     assert_dir(case_path)
