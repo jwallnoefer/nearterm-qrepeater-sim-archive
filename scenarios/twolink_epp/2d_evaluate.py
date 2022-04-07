@@ -67,9 +67,20 @@ res_extend = np.array(res_extend, dtype=int).reshape((len(fidelities), len(memor
 plt.pcolormesh(memory_times, fidelities, res_better, shading="nearest")
 plt.xscale("log")
 plt.xlim(10**-3, 1)
+plt.xlabel("dephasing time T_DP")
+plt.ylabel("initial fidelity F_INIT")
 plt.show()
 
 plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest")
+import itertools
+aux_x = []
+aux_y = []
+for i, j in itertools.product(memory_times, fidelities):
+    aux_x += [i]
+    aux_y += [j]
+plt.scatter(aux_x, aux_y)
 plt.xscale("log")
-plt.xlim(10**-3, 1)
+plt.xlim(0.8*10**-3, 1.2)
+plt.xlabel("dephasing time T_DP")
+plt.ylabel("initial fidelity F_INIT")
 plt.show()
