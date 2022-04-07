@@ -22,7 +22,7 @@ for case in no_epp_cases:
         continue
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
-                    "--time", "0-00:30:00", "--mailtype", "FAIL",
+                    "--time", "0-02:00:00", "--mailtype", "FAIL",
                     "--bundle", "8", f"{case}"])
     print(f"Finished submitting case {case}.")
     sleep(10)
@@ -35,7 +35,7 @@ for case in epp_cases:
         continue
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
-                    "--time", "0-00:45:00", "--mailtype", "FAIL",
+                    "--time", "0-03:00:00", "--mailtype", "FAIL",
                     "--bundle", "4", f"{case}"])
     print(f"Finished submitting case {case}.")
     sleep(10)
