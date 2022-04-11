@@ -8,8 +8,10 @@ path = os.path.join("scenarios", "twolink_epp")
 result_path = os.path.join("results", "twolink_epp")
 
 # schedules the cases of 2dplots in
-no_epp_cases = np.arange(6, 227)
-epp_cases = np.arange(227, 448)
+# no_epp_cases = np.arange(6, 227)
+# epp_cases = np.arange(227, 448)
+no_epp_cases = np.arange(448, 669)
+epp_cases = np.arange(669, 890)
 
 
 with open("environment_setup.txt", "r") as f:
@@ -23,9 +25,9 @@ for case in no_epp_cases:
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
                     "--time", "0-02:00:00", "--mailtype", "FAIL",
-                    "--bundle", "8", f"{case}"])
+                    "--bundle", "16", f"{case}"])
     print(f"Finished submitting case {case}.")
-    sleep(10)
+    sleep(5)
 
 
 for case in epp_cases:
@@ -36,6 +38,6 @@ for case in epp_cases:
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
                     "--time", "0-03:00:00", "--mailtype", "FAIL",
-                    "--bundle", "4", f"{case}"])
+                    "--bundle", "8", f"{case}"])
     print(f"Finished submitting case {case}.")
-    sleep(10)
+    sleep(5)
