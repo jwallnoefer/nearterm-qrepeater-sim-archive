@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("case", type=int, help="The case number as defined in case_defition.")
     parser.add_argument("part", type=int, nargs="?", help="Which part of the case to run.")
     parser.add_argument("--collect", default=False, action="store_const", const=True, help="Set this flag to collect results instead of running.")
+    parser.add_argument("--runexisting", default=False, action="store_const", const=True, help="Set this flag to run parts regardless of whether they already exists.")
     args = parser.parse_args()
 
     if args.collect:
@@ -33,6 +34,9 @@ if __name__ == "__main__":
         if args.part is None:
             raise ValueError("If not in --collect mode, `part` must be specified.")
         output_path = os.path.join(args.result_path, "parts")
+        if not args.runexisting and os.path.exists(os.path.join(output_path, f"part{args.part}.bz2")):
+            print(f"Skipping part{args.part} because it already exists. Use option --runexisting to run anyway.")
+            return
         run_args = case_definition.case_args(case=args.case, part=args.part)
         with open(os.path.join(output_path, f"part{args.part}.log"), "w") as f:
             print(run_args, file=f)
