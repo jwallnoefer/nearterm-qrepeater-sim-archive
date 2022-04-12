@@ -26,6 +26,7 @@ if __name__ == "__main__":
             try:
                 results = pd.concat([results, pd.read_csv(os.path.join(args.result_path, "parts", f"part{part}.csv"))])
             except FileNotFoundError:
+                print(f"part{part} not found in collect")
                 continue
             index.append(base_index[part])
         results.index = index
@@ -34,7 +35,7 @@ if __name__ == "__main__":
         if args.part is None:
             raise ValueError("If not in --collect mode, `part` must be specified.")
         output_path = os.path.join(args.result_path, "parts")
-        if not args.runexisting and os.path.exists(os.path.join(output_path, f"part{args.part}.bz2")):
+        if not args.runexisting and os.path.exists(os.path.join(output_path, f"part{args.part}.csv")):
             print(f"Skipping part{args.part} because it already exists. Use option --runexisting to run anyway.")
         else:
             run_args = case_definition.case_args(case=args.case, part=args.part)
