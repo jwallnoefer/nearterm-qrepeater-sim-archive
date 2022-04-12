@@ -36,13 +36,13 @@ if __name__ == "__main__":
         output_path = os.path.join(args.result_path, "parts")
         if not args.runexisting and os.path.exists(os.path.join(output_path, f"part{args.part}.bz2")):
             print(f"Skipping part{args.part} because it already exists. Use option --runexisting to run anyway.")
-            return
-        run_args = case_definition.case_args(case=args.case, part=args.part)
-        with open(os.path.join(output_path, f"part{args.part}.log"), "w") as f:
-            print(run_args, file=f)
-        res = run_epp(**run_args).data
-        res.to_pickle(os.path.join(output_path, f"part{args.part}.bz2"))
-        evaluated_res = pd.DataFrame([standard_bipartite_evaluation(res)],
-                                     columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"]
-                                     )
-        evaluated_res.to_csv(os.path.join(output_path, f"part{args.part}.csv"), index=False)
+        else:
+            run_args = case_definition.case_args(case=args.case, part=args.part)
+            with open(os.path.join(output_path, f"part{args.part}.log"), "w") as f:
+                print(run_args, file=f)
+            res = run_epp(**run_args).data
+            res.to_pickle(os.path.join(output_path, f"part{args.part}.bz2"))
+            evaluated_res = pd.DataFrame([standard_bipartite_evaluation(res)],
+                                         columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"]
+                                         )
+            evaluated_res.to_csv(os.path.join(output_path, f"part{args.part}.csv"), index=False)
