@@ -7,8 +7,12 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.join("results", "twolink_epp")
 
-no_epp_cases = np.arange(6, 227)
-epp_cases = np.arange(227, 448)
+# no_epp_cases = np.arange(6, 227)
+# epp_cases = np.arange(227, 448)
+# no_epp_cases = np.arange(448, 669)
+# epp_cases = np.arange(669, 890)
+no_epp_cases = np.arange(890, 1111)
+epp_cases = np.arange(1111, 1332)
 
 
 def is_always_better(no_epp_data, epp_data):
@@ -27,7 +31,7 @@ def extends_range(no_epp_data, epp_data):
     epp_idx = epp_series > 0
     epp_reachable = epp_series[epp_idx].index[-1]
 
-    return epp_reachable > no_epp_reachable
+    return epp_reachable - no_epp_reachable
 
 
 res_better = []
@@ -69,16 +73,18 @@ plt.xlabel("dephasing time T_DP")
 plt.ylabel("initial fidelity F_INIT")
 plt.show()
 
-plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest")
+lim = np.max(np.abs(res_extend))
+pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
 import itertools
 aux_x = []
 aux_y = []
 for i, j in itertools.product(memory_times, fidelities):
     aux_x += [i]
     aux_y += [j]
-plt.scatter(aux_x, aux_y)
+plt.scatter(aux_x, aux_y, s=5)
 plt.xscale("log")
 plt.xlim(0.8*10**-3, 1.2)
 plt.xlabel("dephasing time T_DP")
 plt.ylabel("initial fidelity F_INIT")
+plt.colorbar(pcm)
 plt.show()
