@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.join("results", "twolink_epp")
 
-# no_epp_cases = np.arange(6, 227)
-# epp_cases = np.arange(227, 448)
+no_epp_cases = np.arange(6, 227)
+epp_cases = np.arange(227, 448)
 # no_epp_cases = np.arange(448, 669)
 # epp_cases = np.arange(669, 890)
-no_epp_cases = np.arange(890, 1111)
-epp_cases = np.arange(1111, 1332)
+# no_epp_cases = np.arange(890, 1111)
+# epp_cases = np.arange(1111, 1332)
 
 
 def is_always_better(no_epp_data, epp_data):
@@ -32,6 +32,7 @@ def extends_range(no_epp_data, epp_data):
     epp_reachable = epp_series[epp_idx].index[-1]
 
     return epp_reachable - no_epp_reachable
+    # return epp_reachable / no_epp_reachable
 
 
 res_better = []

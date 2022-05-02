@@ -149,7 +149,7 @@ start_case = 6
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 450e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": "2d_plot_100_memories",
@@ -178,7 +178,7 @@ start_case = len(cases)  # currently 227
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 450e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": "2d_plot_100_memories",
@@ -209,7 +209,7 @@ num_memories = 2
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 350e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": f"2d_plot_{num_memories}_memories",
@@ -240,7 +240,7 @@ num_memories = 2
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 350e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": f"epp_2d_plot_{num_memories}_memories",
@@ -271,7 +271,7 @@ num_memories = 4
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 400e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": f"2d_plot_{num_memories}_memories",
@@ -302,7 +302,7 @@ num_memories = 4
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 400e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
         "name": f"2d_plot_{num_memories}_memories",
