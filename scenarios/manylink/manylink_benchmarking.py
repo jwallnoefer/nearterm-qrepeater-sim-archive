@@ -1,3 +1,4 @@
+"""A simplified scenario with only very basic parameters."""
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
@@ -58,6 +59,8 @@ class ManylinkProtocol(MessageReadingProtocol):
         self.resource_cost_max_list = []
         self.resource_cost_add_list = []
         self.scheduled_swappings = defaultdict(lambda: [])
+        self.step = 0
+        self.counter = 0
         super(ManylinkProtocol, self).__init__(world=world)
 
     def setup(self):
@@ -189,73 +192,40 @@ class ManylinkProtocol(MessageReadingProtocol):
             # self.check()  # was useful at some point for other scenarios
 
     def check(self, message=None):
-        if message is None:
-            for station in self.stations:
-                self._check_station_overflow(station)
-            for station in self.stations:
-                self._check_new_source_events(station)
-            for station in self.stations:
-                self._check_swapping(station)
-            self._check_long_distance_pair()
-        elif message["event_type"] == "SourceEvent" and message["resolve_successful"] is True:
-            output_pair = message["output_pair"]
-            stations = [output_pair.qubit1.station, output_pair.qubit2.station]
-            for station in stations:
-                has_overflowed = self._check_station_overflow(station)
-                if has_overflowed:
-                    self._check_new_source_events(station)
-                self._check_swapping(station)
-        elif message["event_type"] == "SourceEvent" and message["resolve_successful"] is False:
-            warn("A SourceEvent has resolved unsuccessfully. This should never happen.")
-        elif message["event_type"] == "DiscardQubitEvent" and message["resolve_successful"] is True:
-            discarded_qubit = message["qubit"]
-            self._check_new_source_events(discarded_qubit.station)
-        elif message["event_type"] == "DiscardQubitEvent" and message["resolve_successful"] is False:
-            pass
-        elif message["event_type"] == "EntanglementSwappingEvent" and message["resolve_successful"] is True:
-            self._check_new_source_events(message["swapping_station"])
-            output_pair = message["output_pair"]
-            for station in [output_pair.qubit1.station, output_pair.qubit2.station]:
-                self._check_swapping(station)
-            self._check_long_distance_pair()
-        elif message["event_type"] == "EntanglementSwappingEvent" and message["resolve_successful"] is False:
-            # warn("An EntanglementSwappingEvent has resolved unsuccessfully. Trying to recover.")
-            # for station in self.stations:
-            #     self._check_swapping(station)
-            pass
-        else:
-            warn(f"Unrecognized message type encountered: {message}")
+        if len(self.world.event_queue.queue) != 0:
+            return
+        if self.step == 0:
+            for source in self.sources:
+                source.schedule_event()
+            self.step = 1
+        elif self.step == 1:
+            pairs = self.world.world_objects["Pair"]
+            if len(pairs) == 1:
+                self._check_long_distance_pair()
+                self.step = 0
+                self.counter = 0
+                self.check()
+            else:
+                self._check_swapping(self.stations[1 + self.counter])
+                self.counter += 1
 
 
-def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
+def run(length, max_iter, params, num_links):
     assert num_links % 2 == 0
-    allowed_params = ["P_LINK", "T_P", "E_MA", "P_D", "LAMBDA_BSM", "F_INIT", "T_DP"]
+    allowed_params = ["F_INIT", "T_DP"]
     for key in params:
         if key not in allowed_params:
             warn(f"params[{key}] is not a supported parameter and will be ignored.")
     # unpack the parameters
-    P_LINK = params.get("P_LINK", 1.0)
-    T_P = params.get("T_P", 0)  # preparation time
-    E_MA = params.get("E_MA", 0)  # misalignment error
-    P_D = params.get("P_D", 0)  # dark count probability
-    LAMBDA_BSM = params.get("LAMBDA_BSM", 1)  # Bell state measurement ideality parameter
     F_INIT = params.get("F_INIT", 1.0)  # initial fidelity of created pairs
     try:
         T_DP = params["T_DP"]  # dephasing time
     except KeyError as e:
         raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
 
-    def imperfect_bsm_err_func(four_qubit_state):
-        return LAMBDA_BSM * four_qubit_state + (1 - LAMBDA_BSM) * mat.reorder(mat.tensor(mat.ptrace(four_qubit_state, [1, 2]), mat.I(4) / 4), [0, 2, 3, 1])
-
+    @lru_cache()
     def time_distribution(source):
-        comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
-        comm_time = 2 * comm_distance / C
-        eta = P_LINK * np.exp(-comm_distance / L_ATT)
-        eta_effective = 1 - (1 - eta) * (1 - P_D)**2
-        trial_time = T_P + comm_time  # I don't think that paper uses latency time and loading time?
-        random_num = np.random.geometric(eta_effective)
-        return random_num * trial_time, random_num
+        return 1, 1
 
     @lru_cache()
     def state_generation(source):
@@ -270,31 +240,18 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
             if station.memory_noise is not None:  # dephasing that has accrued while other qubit was travelling
                 storage_time = trial_time - distance(source, station) / C  # qubit is in storage for varying amounts of time
                 state = apply_single_qubit_map(map_func=station.memory_noise, qubit_index=idx, rho=state, t=storage_time)
-            if station.dark_count_probability is not None:  # dark counts are handled here because the information about eta is needed for that
-                eta = P_LINK * np.exp(-comm_distance / L_ATT)
-                state = apply_single_qubit_map(map_func=w_noise_channel, qubit_index=idx, rho=state, alpha=alpha_of_eta(eta=eta, p_d=station.dark_count_probability))
         return state
-
-    misalignment_noise = NoiseChannel(n_qubits=1, channel_function=construct_y_noise_channel(epsilon=E_MA))
 
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
     world = World()
-    station_A = Station(world, position=station_positions[0], memory_noise=None,
-                        creation_noise_channel=misalignment_noise,
-                        dark_count_probability=P_D
-                        )
+    station_A = Station(world, position=station_positions[0], memory_noise=None)
     other_stations = [Station(world, position=pos,
-                              memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP),
-                              memory_cutoff_time=cutoff_time,
-                              BSM_noise_model=NoiseModel(channel_before=NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func))
+                              memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP)
                               )
                       for pos in station_positions[1:-1]
                       ]
-    station_B = Station(world, position=station_positions[-1], memory_noise=None,
-                        creation_noise_channel=misalignment_noise,
-                        dark_count_probability=P_D
-                        )
+    station_B = Station(world, position=station_positions[-1], memory_noise=None)
     stations = [station_A] + other_stations + [station_B]
     source_positions = [station_positions[2 * (i // 2) + 1] for i in range(num_links)]
     sources = []
@@ -304,7 +261,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
                                      time_distribution=time_distribution,
                                      state_generation=state_generation)
                     ]
-    protocol = ManylinkProtocol(world, stations, sources, num_memories=num_memories, communication_speed=C)
+    protocol = ManylinkProtocol(world, stations, sources, num_memories=1, communication_speed=C)
     protocol.setup()
 
     # from code import interact
@@ -324,8 +281,8 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
 
 if __name__ == "__main__":
     from time import time
-    max_iter = 10
-    x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
+    max_iter = 100
+    x = np.linspace(0, 1024, num=64 + 1, dtype=int)[1:]
     y = []
     for num_links in x:
         print(num_links)
