@@ -243,8 +243,8 @@ num_parts = 128
 lengths = np.linspace(1, 350e3, num=num_parts)
 for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
     case_specification = {
-        "name": f"epp_2d_plot_{num_memories}_memories",
-        "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
+        "name": f"2d_plot_{num_memories}_memories",
+        "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
         "num_parts": num_parts,
         "index": lengths,
         "case_args": {part: {"length": lengths[part],
