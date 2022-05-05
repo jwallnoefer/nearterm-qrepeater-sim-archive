@@ -10,10 +10,10 @@ result_path = os.path.join("results", "twolink_epp")
 # schedules the cases of 2dplots in
 # no_epp_cases = np.arange(6, 227)
 # epp_cases = np.arange(227, 448)
-no_epp_cases = np.arange(448, 669)
-epp_cases = np.arange(669, 890)
-# no_epp_cases = np.arange(890, 1111)
-# epp_cases = np.arange(1111, 1332)
+# no_epp_cases = np.arange(448, 669)
+# epp_cases = np.arange(669, 890)
+no_epp_cases = np.arange(890, 1111)
+epp_cases = np.arange(1111, 1332)
 
 
 with open("environment_setup.txt", "r") as f:
