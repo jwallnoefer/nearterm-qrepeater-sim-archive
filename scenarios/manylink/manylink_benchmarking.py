@@ -281,7 +281,7 @@ def run(length, max_iter, params, num_links):
 
 if __name__ == "__main__":
     from time import time
-    max_iter = 100
+    max_iter = 10
     x = np.linspace(0, 1024, num=64 + 1, dtype=int)[1:]
     y = []
     for num_links in x:
@@ -298,6 +298,6 @@ if __name__ == "__main__":
     plt.plot(x, y)
     plt.xlabel("num_links")
     plt.ylabel("time [s]")
-    plt.yscale("log")
+    # plt.yscale("log")
     plt.grid()
     plt.show()
