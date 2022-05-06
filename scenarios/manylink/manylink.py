@@ -275,7 +275,16 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
                 state = apply_single_qubit_map(map_func=w_noise_channel, qubit_index=idx, rho=state, alpha=alpha_of_eta(eta=eta, p_d=station.dark_count_probability))
         return state
 
-    misalignment_noise = NoiseChannel(n_qubits=1, channel_function=construct_y_noise_channel(epsilon=E_MA))
+    if E_MA != 0:
+        misalignment_noise = NoiseChannel(n_qubits=1, channel_function=construct_y_noise_channel(epsilon=E_MA))
+    else:
+        misalignment_noise = None
+
+    if LAMBDA_BSM != 1:
+        bsm_noise_channel = NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func)
+    else:
+        bsm_noise_channel = None
+
 
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
@@ -287,7 +296,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
     other_stations = [Station(world, position=pos,
                               memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP),
                               memory_cutoff_time=cutoff_time,
-                              BSM_noise_model=NoiseModel(channel_before=NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func))
+                              BSM_noise_model=NoiseModel(channel_before=bsm_noise_channel)
                               )
                       for pos in station_positions[1:-1]
                       ]
@@ -325,14 +334,15 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
 if __name__ == "__main__":
     from time import time
     max_iter = 10
-    x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
+    # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
+    x = [2, 4, 8, 16, 32, 64, 128]
     y = []
     for num_links in x:
         print(num_links)
         start_time = time()
         res = run(length=22000, max_iter=max_iter,
                   params={"T_DP": 25, "F_INIT": 0.95},
-                  num_links=num_links)
+                  num_links=num_links, num_memories=1)
         # print(res.data)
         # print(f"{num_links=} took {time() - start_time} seconds.")
         time_interval = (time() - start_time) / max_iter
