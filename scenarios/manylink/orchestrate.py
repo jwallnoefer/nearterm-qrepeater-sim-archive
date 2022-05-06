@@ -42,7 +42,7 @@ if __name__ == "__main__":
         array_entry = args.parts
     with open("environment_setup.txt", "r") as f:
         environment_setup_string = f.read()
-    run_string = f"pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case}"
+    run_string = f"pipenv run python scenarios/manylink/run_manylink.py {subcase_path} {case}"
     if args.bundle == 1:
         run_instructions = f"{run_string} $SLURM_ARRAY_TASK_ID"
     else:
@@ -100,7 +100,7 @@ scontrol show job $SLURM_JOBID
 scontrol show job $SLURM_JOBID
 
 {environment_setup_string}
-pipenv run python scenarios/twolink_epp/run_two_link_epp.py --collect {subcase_path} {case}
+pipenv run python scenarios/manylink/run_manylink.py --collect {subcase_path} {case}
 """
         collect_file = os.path.join(subcase_path, f"collect_case_{case}.sh")
         with open(collect_file, "w") as f:
