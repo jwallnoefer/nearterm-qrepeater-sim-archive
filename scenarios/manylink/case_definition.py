@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
 link_iter = [2, 4, 8, 16, 32, 64, 128]
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 150e3, num=num_parts)
 for num_links in link_iter:
     case_specification = {
         "name": case_name,
