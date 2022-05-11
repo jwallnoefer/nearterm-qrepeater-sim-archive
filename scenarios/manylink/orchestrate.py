@@ -92,7 +92,7 @@ scontrol show job $SLURM_JOBID
 #SBATCH --mem-per-cpu={args.memcollect}              # Memory per cpu in MB (see also --mem)
 #SBATCH --output=out_files/%x.out           # File to which standard out will be written
 #SBATCH --error=out_files/%x.err            # File to which standard err will be written
-#SBATCH --mail-type={args.mailtype}                # Type of email notification- BEGIN,END,FAIL,ALL
+#SBATCH --mail-type=FAIL               # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user={email}   # Email to which notifications will be sent
 #SBATCH --qos=standard
 
