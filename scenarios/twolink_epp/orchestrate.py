@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--memcollect", default=1024, help="memory in MB for result collection step")
     parser.add_argument("--mailtype", default="ALL", help="mail-type option for sbatch. Default: ALL")
     parser.add_argument("--bundle", type=int, default=1, help="how many parts to bundle in one slurm job, works only if --parts is not specified and the number of all parts is divisible by bundle")
+    parser.add_argument("--nocollect", default=False, action="store_const", const=True, help="Set this flag to skip the collection step. Useful if many orchestrates are launched at the same time and collection is handled via a supercase.")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
@@ -80,8 +81,9 @@ scontrol show job $SLURM_JOBID
     err1 = submit1.stderr.decode("ascii")
     if err1:
         raise RuntimeError(err1)
-    jid1 = re.search("([0-9]+)", out1).group(1)
-    collect_text = f"""#!/bin/bash
+    if not args.nocollect:
+        jid1 = re.search("([0-9]+)", out1).group(1)
+        collect_text = f"""#!/bin/bash
 
 #SBATCH --job-name=c_{job_name}     # Job name, will show up in squeue output
 #SBATCH --ntasks=1                     # Number of cores
@@ -100,11 +102,11 @@ scontrol show job $SLURM_JOBID
 {environment_setup_string}
 pipenv run python scenarios/twolink_epp/run_two_link_epp.py --collect {subcase_path} {case}
 """
-    collect_file = os.path.join(subcase_path, f"collect_case_{case}.sh")
-    with open(collect_file, "w") as f:
-        f.write(collect_text)
-    submit2 = subprocess.run(["sbatch", f"--dependency=afterany:{jid1}", "--deadline=now+14days", collect_file], capture_output=True)
-    out2 = submit2.stdout.decode("ascii")
-    err2 = submit2.stderr.decode("ascii")
-    if err2:
-        raise RuntimeError(err2)
+        collect_file = os.path.join(subcase_path, f"collect_case_{case}.sh")
+        with open(collect_file, "w") as f:
+            f.write(collect_text)
+        submit2 = subprocess.run(["sbatch", f"--dependency=afterany:{jid1}", "--deadline=now+14days", collect_file], capture_output=True)
+        out2 = submit2.stdout.decode("ascii")
+        err2 = submit2.stderr.decode("ascii")
+        if err2:
+            raise RuntimeError(err2)
