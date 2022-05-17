@@ -400,6 +400,80 @@ if __name__ == "__main__":
     print(f"Case {case_name} ends at case number", len(cases))
 
 
+# how about with even worse states?
+f_init = 0.925
+t_dp = 100e-3
+case_name = f"compare_cutoff_{int(t_dp * 1e3)}_f{int(f_init * 1e3)}"
+
+cutoff_multipliers = [0.05, 0.1, 0.15, 0.20, 0.25, 0.3, 0.35, 0.4, None]
+num_memories = 2
+num_parts = 128
+lengths = np.linspace(1, 300e3, num=num_parts)
+if __name__ == "__main__":
+    print(f"Case {case_name} starts at case number", len(cases))
+for cutoff_multiplier in cutoff_multipliers:
+    try:
+        label = str(int(cutoff_multiplier * 1e3))
+    except TypeError:
+        label = "None"
+    try:
+        cutoff_time = cutoff_multiplier * t_dp
+    except TypeError:
+        cutoff_time = None
+    case_specification = {
+        "name": case_name,
+        "subcase_name": f"cutoff{label}",
+        "num_parts": num_parts,
+        "index": lengths,
+        "case_args": {part: {"length": lengths[part],
+                             "max_iter": 1e5,
+                             "params": {"P_LINK": 0.5,
+                                        "T_DP": t_dp,
+                                        "F_INIT": f_init,
+                                        "P_D": 1e-6
+                                        },
+                             "cutoff_time": cutoff_time,
+                             "num_memories": num_memories,
+                             "epp_steps": 0,
+                             }
+                      for part in range(num_parts)
+                      }
+    }
+    cases.update({len(cases): case_specification})
+for cutoff_multiplier in cutoff_multipliers:
+    try:
+        label = str(int(cutoff_multiplier * 1e3))
+    except TypeError:
+        label = "None"
+    try:
+        cutoff_time = cutoff_multiplier * t_dp
+    except TypeError:
+        cutoff_time = None
+    case_specification = {
+        "name": case_name,
+        "subcase_name": f"epp_cutoff{label}",
+        "num_parts": num_parts,
+        "index": lengths,
+        "case_args": {part: {"length": lengths[part],
+                             "max_iter": 1e5,
+                             "params": {"P_LINK": 0.5,
+                                        "T_DP": t_dp,
+                                        "F_INIT": f_init,
+                                        "P_D": 1e-6
+                                        },
+                             "cutoff_time": cutoff_time,
+                             "num_memories": num_memories,
+                             "epp_steps": 1,
+                             }
+                      for part in range(num_parts)
+                      }
+    }
+    cases.update({len(cases): case_specification})
+if __name__ == "__main__":
+    print(f"Case {case_name} ends at case number", len(cases))
+
+
+
 num_cases = len(cases)
 
 
