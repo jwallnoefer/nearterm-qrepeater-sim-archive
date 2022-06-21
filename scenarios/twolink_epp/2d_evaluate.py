@@ -7,12 +7,14 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.join("results", "twolink_epp")
 
-no_epp_cases = np.arange(6, 227)
-epp_cases = np.arange(227, 448)
+# no_epp_cases = np.arange(6, 227)
+# epp_cases = np.arange(227, 448)
 # no_epp_cases = np.arange(448, 669)
 # epp_cases = np.arange(669, 890)
 # no_epp_cases = np.arange(890, 1111)
 # epp_cases = np.arange(1111, 1332)
+no_epp_cases = np.arange(1368, 1377)
+epp_cases = np.arange(1377, 1386)
 
 
 def is_always_better(no_epp_data, epp_data):
@@ -51,6 +53,7 @@ for no_epp_case, epp_case in zip(no_epp_cases, epp_cases):
                                 case_definition.subcase_name(epp_case),
                                 "result.csv")
         epp_data = pd.read_csv(epp_path, index_col=0)
+        print(len(no_epp_data), len(epp_data))
         res_better += [is_always_better(no_epp_data, epp_data)]
         res_extend += [extends_range(no_epp_data, epp_data)]
     except FileNotFoundError:

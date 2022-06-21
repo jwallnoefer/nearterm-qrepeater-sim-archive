@@ -25,7 +25,12 @@ for name, case_list in grouped_dict.items():
         subcase_name = case_definition.subcase_name(case)
         subcase_path = os.path.join(result_path, name, subcase_name)
         res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
-        plt.scatter(res.index, res["key_per_time"], s=5, label=subcase_name)
+        if subcase_name[0:3] == "epp":
+            marker = "x"
+        else:
+            marker = "o"
+        # plt.scatter(res.index, res["key_per_time"], marker=marker, s=10, label=subcase_name)
+        plt.scatter(res.index, res["fidelity"], marker=marker, s=10, label=subcase_name)
     plt.yscale("log")
     plt.grid()
     plt.title(name)
