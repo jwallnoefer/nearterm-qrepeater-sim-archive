@@ -105,29 +105,29 @@ if __name__ == "__main__":
          np.savetxt(os.path.join(path, "key_per_time_list.txt"), key_per_time_list)
          np.savetxt(os.path.join(path, "key_per_resource_list.txt"), key_per_resource_list)
 
-   # ### here we plot the Rb lines for different cut-off times
-     """name = "Rb"
-     params = params_available_Rb
-     length_list = np.arange(25000, 425000, 25000)
-     for m in [100, 200, 500, 1000, 2000, 5000, 10000, 20000]:
-         print("m=%d" % m)
-         trial_time_manual = 1 / params["f_clock"]
-         key_per_time_list = []
-         key_per_resource_list = []
-         for l in length_list:
-            print(l)
-            def wrapper(itera):
-                return parallel_run(itera, params, l, m*trial_time_manual)
-            with mp.Pool(mp.cpu_count()) as pool:
-                rates = pool.map(wrapper, iters)
-            av_rates = np.sum(np.array(rates), axis = 0) / 16
-            key_per_time_list += [av_rates[0]]
-            key_per_resource_list += [av_rates[1]]
-         path = os.path.join(result_path, "available", "m_test", name)
-         assert_dir(path)
-         np.savetxt(os.path.join(path, "length_list_%d.txt" % m), length_list)
-         np.savetxt(os.path.join(path, "key_per_time_list_%d.txt" % m), key_per_time_list)
-         np.savetxt(os.path.join(path, "key_per_resource_list_%d.txt" % m), key_per_resource_list)"""
+   # # ### here we plot the Rb lines for different cut-off times
+   #   """name = "Rb"
+   #   params = params_available_Rb
+   #   length_list = np.arange(25000, 425000, 25000)
+   #   for m in [100, 200, 500, 1000, 2000, 5000, 10000, 20000]:
+   #       print("m=%d" % m)
+   #       trial_time_manual = 1 / params["f_clock"]
+   #       key_per_time_list = []
+   #       key_per_resource_list = []
+   #       for l in length_list:
+   #          print(l)
+   #          def wrapper(itera):
+   #              return parallel_run(itera, params, l, m*trial_time_manual)
+   #          with mp.Pool(mp.cpu_count()) as pool:
+   #              rates = pool.map(wrapper, iters)
+   #          av_rates = np.sum(np.array(rates), axis = 0) / 16
+   #          key_per_time_list += [av_rates[0]]
+   #          key_per_resource_list += [av_rates[1]]
+   #       path = os.path.join(result_path, "available", "m_test", name)
+   #       assert_dir(path)
+   #       np.savetxt(os.path.join(path, "length_list_%d.txt" % m), length_list)
+   #       np.savetxt(os.path.join(path, "key_per_time_list_%d.txt" % m), key_per_time_list)
+   #       np.savetxt(os.path.join(path, "key_per_resource_list_%d.txt" % m), key_per_resource_list)"""
 
    # ### further investigate cutoff times - especially the claim that you can set it too low
      ### effect should be very visible if memory quality is very high

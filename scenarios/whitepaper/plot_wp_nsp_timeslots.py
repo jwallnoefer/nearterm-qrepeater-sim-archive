@@ -1,9 +1,20 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from scenarios.whitepaper.run_whitepaper_nsp import available_params, future_params, ms_available, ms_future
 from libs.aux_functions import binary_entropy
 import pandas as pd
+import rsmf
+
+# colorblind friendly color set taken from https://personal.sron.nl/~pault/
+colors = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB']
+# make them the standard colors for matplotlib
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
+color_list = colors
+
+formatter = rsmf.setup(r"\documentclass{revtex4-2}")
+
 
 result_path = os.path.join("results", "whitepaper_timeslots")
 
@@ -61,9 +72,10 @@ def kr_time_whitepaper(L, m, params):
     return 1/(1/R + 1/2) * (1 - binary_entropy(1 / 2 * (1 - E))) / 2
 
 name_list = ["NV", "SiV", "Qdot", "Ca", "Rb"]
-color_list = ["blue", "green", "purple", "orange", "red"]
+# color_list = ["blue", "green", "purple", "orange", "red"]
 
 # first plot available values
+fig = formatter.figure()
 plt.plot(x_base, y_repeaterless, color="black")
 plt.plot(x_base, y_optimal, color="gray")
 plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
@@ -76,19 +88,21 @@ for name, color in zip(name_list, color_list):
     y = db(df["key_per_resource"] / 2)
     if name == "Ca":
         name = "Ca/Yb"
-    plt.scatter(x, y, marker="o", s=5, label=name, color=color)
+    plt.scatter(x, y, marker="o", s=1.5, label=name, color=color)
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
-plt.legend()
+# plt.legend()
 plt.grid()
 plt.xlabel("L [km]")
-plt.ylabel("secret key rate per channel use [dB]")
-plt.title("Available parameters")
+plt.ylabel("key rate per channel use [dB]")
+# plt.title("Available parameters")
+plt.tight_layout()
 plt.savefig(os.path.join(result_path, "available", "no_cutoff.png"))
-plt.savefig(os.path.join(result_path, "available", "no_cutoff.pdf"), bbox_inches="tight", pad_inches=1)
-plt.show()
+plt.savefig(os.path.join(result_path, "available", "no_cutoff.pdf"))
+plt.cla()
 
 # now plot future values
+fig = formatter.figure()
 plt.plot(x_base, y_repeaterless, color="black")
 plt.plot(x_base, y_optimal, color="gray")
 plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
@@ -101,22 +115,24 @@ for name, color in zip(name_list, color_list):
     y = db(df["key_per_resource"] / 2)
     if name == "Ca":
         name = "Ca/Yb"
-    plt.scatter(x, y, marker="o", s=5, label=name, color=color)
+    plt.scatter(x, y, marker="o", s=1.5, label=name, color=color)
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
-plt.legend()
+# plt.legend()
 plt.grid()
 plt.xlabel("L [km]")
-plt.ylabel("secret key rate per channel use [dB]")
-plt.title("Future parameters")
+plt.ylabel("key rate per channel use [dB]")
+# plt.title("Future parameters")
+plt.tight_layout()
 plt.savefig(os.path.join(result_path, "future", "no_cutoff.png"))
-plt.savefig(os.path.join(result_path, "future", "no_cutoff.pdf"), bbox_inches="tight", pad_inches=1)
-plt.show()
+plt.savefig(os.path.join(result_path, "future", "no_cutoff.pdf"))
+plt.cla()
 
 
 ## now compare with what we THINK is the line in the whitepaper
 
 # first plot available values
+fig = formatter.figure()
 plt.plot(x_base, y_repeaterless, color="black")
 plt.plot(x_base, y_optimal, color="gray")
 plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
@@ -131,22 +147,24 @@ for name, color, params, m in zip(name_list, color_list, available_params, ms_av
     # print(yerr)
     if name == "Ca":
         name = "Ca/Yb"
-    plt.scatter(x, y, marker="o", s=5, label=name, color=color)
+    plt.scatter(x, y, marker="o", s=1.5, label=name, color=color)
     # plt.errorbar(x, y, yerr=yerr, marker="o", ms=2, ls="none", label=name, color=color)
     y_whitepaper = db([skr_whitepaper(l, m, params) / 2 for l in (x_base * 1000)])
     plt.plot(x_base, y_whitepaper, color=color, linestyle="solid")
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
-plt.legend()
+# plt.legend()
 plt.grid()
 plt.xlabel("L [km]")
-plt.ylabel("secret key rate per channel use [dB]")
-plt.title("Available parameters")
+plt.ylabel("key rate per channel use [dB]")
+# plt.title("Available parameters")
+plt.tight_layout()
 plt.savefig(os.path.join(result_path, "available", "compare.png"))
-plt.savefig(os.path.join(result_path, "available", "compare.pdf"), bbox_inches="tight", pad_inches=1)
-plt.show()
+plt.savefig(os.path.join(result_path, "available", "compare.pdf"))
+plt.cla()
 
 # now plot future values
+fig = formatter.figure()
 plt.plot(x_base, y_repeaterless, color="black")
 plt.plot(x_base, y_optimal, color="gray")
 plt.fill_between(x_base, y_repeaterless, y_optimal, facecolor="lightgray")
@@ -159,17 +177,18 @@ for name, color, params, m in zip(name_list, color_list, future_params, ms_futur
     y = db(df["key_per_resource"] / 2)
     if name == "Ca":
         name = "Ca/Yb"
-    plt.scatter(x, y, marker="o", s=5, label=name, color=color)
+    plt.scatter(x, y, marker="o", s=1.5, label=name, color=color)
     y_whitepaper = db([skr_whitepaper(l, m, params) / 2 for l in (x_base * 1000)])
     plt.plot(x_base, y_whitepaper, color=color, linestyle="solid")
 
 plt.xlim((0, 400))
 plt.ylim((-60, 0))
-plt.legend()
+# plt.legend()
 plt.grid()
 plt.xlabel("L [km]")
-plt.ylabel("secret key rate per channel use [dB]")
-plt.title("Future parameters")
+plt.ylabel("key rate per channel use [dB]")
+# plt.title("Future parameters")
+plt.tight_layout()
 plt.savefig(os.path.join(result_path, "future", "compare.png"))
-plt.savefig(os.path.join(result_path, "future", "compare.pdf"), bbox_inches="tight", pad_inches=1)
-plt.show()
+plt.savefig(os.path.join(result_path, "future", "compare.pdf"))
+plt.cla()
