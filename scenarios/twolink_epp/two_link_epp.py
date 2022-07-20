@@ -42,10 +42,11 @@ def alpha_of_eta(eta, p_d):
 
 
 class TwoLinkOneStepEPP(TwoLinkProtocol):
-    def __init__(self, world, num_memories=2, epp_steps=1, communication_speed=C):
+    def __init__(self, world, num_memories=2, epp_steps=1, communication_speed=C, measure_asap=True):
         self.epp_tracking = defaultdict(lambda: 0)
         self.num_memories = num_memories
         self.epp_steps = epp_steps
+        self.measure_asap = measure_asap
         super(TwoLinkOneStepEPP, self).__init__(world, communication_speed=communication_speed)
 
     def _left_epp_is_scheduled(self):
@@ -70,6 +71,12 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
         except StopIteration:
             return False
 
+    def _remove_endstation_noise(self, pair):
+        for qubit in pair.qubits:
+            if qubit in self.station_A.qubits and self.station_A.memory_noise is not None:
+                qubit.remove_time_dependent_noise(self.station_A.memory_noise)
+            elif qubit in self.station_B.qubits and self.station_B.memory_noise is not None:
+                qubit.remove_time_dependent_noise(self.station_B.memory_noise)
 
     def check(self, message=None):
         """Checks world state and schedules new events.
@@ -88,6 +95,8 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
             if message["is_successful"]:
                 output_pair = message["output_pair"]
                 self.epp_tracking[output_pair] += 1
+                if self.epp_tracking[output_pair] == self.epp_steps and self.measure_asap:
+                    self._remove_endstation_noise(output_pair)
 
         for pair in list(self.epp_tracking):
             if pair not in all_pairs:
@@ -179,7 +188,7 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
             warn("Protocol may be stuck in a state without events.")
 
 
-def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1):
+def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1, measure_asap=True):
     allowed_params = ["P_LINK", "T_P", "E_MA", "P_D", "LAMBDA_BSM", "F_INIT", "T_DP"]
     for key in params:
         if key not in allowed_params:
@@ -227,7 +236,13 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
     misalignment_noise = NoiseChannel(n_qubits=1, channel_function=construct_y_noise_channel(epsilon=E_MA))
 
     world = World()
-    station_A = Station(world, position=0, memory_noise=None,
+    if epp_steps == 0 and measure_asap is True:
+        def end_station_noise():
+            return None
+    else:
+        def end_station_noise():
+            return construct_dephasing_noise_channel(dephasing_time=T_DP)
+    station_A = Station(world, position=0, memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
@@ -236,7 +251,7 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
                               memory_cutoff_time=cutoff_time,
                               BSM_noise_model=NoiseModel(channel_before=NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func))
                               )
-    station_B = Station(world, position=length, memory_noise=None,
+    station_B = Station(world, position=length, memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
