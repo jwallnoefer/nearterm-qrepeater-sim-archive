@@ -3,12 +3,17 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[[source]]
+url = "https://test.pypi.org/simple"
+veify_ssl = true
+name = "test_pypi"
+
 [packages]
 numpy = "*"
 pandas = "*"
 matplotlib = "*"
 scipy = "*"
-requsim = "==0.3"
+requsim = {version="==0.1.dev83", index="test_pypi"}
 
 [dev-packages]
 pycairo = "*"
