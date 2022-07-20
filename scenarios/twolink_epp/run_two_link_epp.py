@@ -1,12 +1,9 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import argparse
 import scenarios.twolink_epp.case_definition as case_definition
-from scenarios.whitepaper.NSP_QR_cell import run as run_nsp
 from scenarios.twolink_epp.two_link_epp import run as run_epp
-from libs.aux_functions import assert_dir, standard_bipartite_evaluation, save_result
-import numpy as np
+from requsim.tools.evaluation import standard_bipartite_evaluation
 import pandas as pd
-from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
 
 
 if __name__ == "__main__":
@@ -44,6 +41,6 @@ if __name__ == "__main__":
             res = run_epp(**run_args).data
             res.to_pickle(os.path.join(output_path, f"part{args.part}.bz2"))
             evaluated_res = pd.DataFrame([standard_bipartite_evaluation(res)],
-                                         columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std", "key_per_resource", "key_per_resource_std"]
+                                         columns=["fidelity", "fidelity_std", "key_per_time", "key_per_time_std"]
                                          )
             evaluated_res.to_csv(os.path.join(output_path, f"part{args.part}.csv"), index=False)

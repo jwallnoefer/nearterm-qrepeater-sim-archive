@@ -8,6 +8,7 @@ numpy = "*"
 pandas = "*"
 matplotlib = "*"
 scipy = "*"
+requsim = "==0.3"
 
 [dev-packages]
 pycairo = "*"

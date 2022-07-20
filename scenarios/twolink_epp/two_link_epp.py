@@ -1,16 +1,22 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
-from quantum_objects import SchedulingSource, Station
-from protocol import TwoLinkProtocol
-from world import World
-from events import SourceEvent, EntanglementSwappingEvent, EntanglementPurificationEvent
-import libs.matrix as mat
+from requsim.quantum_objects import SchedulingSource, Station
+from requsim.tools.protocol import TwoLinkProtocol
+from requsim.world import World
+from requsim.events import EntanglementSwappingEvent, EntanglementPurificationEvent
+import requsim.libs.matrix as mat
 import numpy as np
-from libs.aux_functions import apply_single_qubit_map, y_noise_channel, z_noise_channel, w_noise_channel
+from requsim.libs.aux_functions import apply_single_qubit_map, distance
+from requsim.tools.noise_channels import y_noise_channel, z_noise_channel, w_noise_channel
 from warnings import warn
 from collections import defaultdict
-from noise import NoiseModel, NoiseChannel
+from requsim.noise import NoiseModel, NoiseChannel
 from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
 from consts import ATTENUATION_LENGTH_IN_OPTICAL_FIBER as L_ATT
+
+# NOTE: this scenario uses the newer requsim package instead of the outdated
+#       code in this repo, because we need one particular functionality here
+#       requsim is available as a python package on PyPI
+#       Source Code: https://github.com/jwallnoefer/requsim
 
 
 def construct_dephasing_noise_channel(dephasing_time):
@@ -20,7 +26,7 @@ def construct_dephasing_noise_channel(dephasing_time):
     def dephasing_noise_channel(rho, t):
         return z_noise_channel(rho=rho, epsilon=lambda_dp(t))
 
-    return dephasing_noise_channel
+    return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_channel)
 
 
 def construct_y_noise_channel(epsilon):
@@ -36,17 +42,17 @@ def alpha_of_eta(eta, p_d):
 
 
 class TwoLinkOneStepEPP(TwoLinkProtocol):
-    def __init__(self, world, num_memories=2, epp_steps=1):
+    def __init__(self, world, num_memories=2, epp_steps=1, communication_speed=C):
         self.epp_tracking = defaultdict(lambda: 0)
         self.num_memories = num_memories
         self.epp_steps = epp_steps
-        super(TwoLinkOneStepEPP, self).__init__(world)
+        super(TwoLinkOneStepEPP, self).__init__(world, communication_speed=communication_speed)
 
     def _left_epp_is_scheduled(self):
         try:
             next(filter(lambda event: (isinstance(event, EntanglementPurificationEvent)
-                                       and (self.station_A in [qubit.station for qubit in event.pairs[0].qubits])
-                                       and (self.station_central in [qubit.station for qubit in event.pairs[0].qubits])
+                                       and (self.station_A in [qubit._info["station"] for qubit in event.pairs[0].qubits])
+                                       and (self.station_central in [qubit._info["station"] for qubit in event.pairs[0].qubits])
                                        ),
                         self.world.event_queue.queue))
             return True
@@ -56,13 +62,14 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
     def _right_epp_is_scheduled(self):
         try:
             next(filter(lambda event: (isinstance(event, EntanglementPurificationEvent)
-                                       and (self.station_central in [qubit.station for qubit in event.pairs[0].qubits])
-                                       and (self.station_B in [qubit.station for qubit in event.pairs[0].qubits])
+                                       and (self.station_central in [qubit._info["station"] for qubit in event.pairs[0].qubits])
+                                       and (self.station_B in [qubit._info["station"] for qubit in event.pairs[0].qubits])
                                        ),
                         self.world.event_queue.queue))
             return True
         except StopIteration:
             return False
+
 
     def check(self, message=None):
         """Checks world state and schedules new events.
@@ -79,7 +86,8 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
 
         if message is not None and message["event_type"] == "EntanglementPurificationEvent":
             if message["is_successful"]:
-                self.epp_tracking[message["output_pair"]] += 1
+                output_pair = message["output_pair"]
+                self.epp_tracking[output_pair] += 1
 
         for pair in list(self.epp_tracking):
             if pair not in all_pairs:
@@ -112,9 +120,11 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
             # find purifiable pairs at same recurrence level
             for steps, pairs in staged_pairs.items():
                 if len(pairs) >= 2 and steps < self.epp_steps:
+                    communcation_time = distance(self.station_A, self.station_central) / self.communication_speed
                     epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
                                                               pairs=pairs[0:2],
-                                                              protocol="dejmps")
+                                                              protocol="dejmps",
+                                                              communication_time=communcation_time)
                     self.world.event_queue.add_event(epp_event)
 
         if num_right_pairs >= 2 and not self._right_epp_is_scheduled():
@@ -127,9 +137,11 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
             # find purifiable pairs at same recurrence level
             for steps, pairs in staged_pairs.items():
                 if len(pairs) >= 2 and steps < self.epp_steps:
+                    communcation_time = distance(self.station_central, self.station_B) / self.communication_speed
                     epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
                                                               pairs=pairs[0:2],
-                                                              protocol="dejmps")
+                                                              protocol="dejmps",
+                                                              communication_time=communcation_time)
                     self.world.event_queue.add_event(epp_event)
 
         # check for swapping
@@ -151,7 +163,8 @@ class TwoLinkOneStepEPP(TwoLinkProtocol):
                     is_already_scheduled = False
                 if not is_already_scheduled:
                     ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time,
-                                                               pairs=[left_pair, right_pair])
+                                                               pairs=[left_pair, right_pair],
+                                                               station=self.station_central)
                     self.world.event_queue.add_event(ent_swap_event)
 
         long_range_pairs = self._get_long_range_pairs()
@@ -193,7 +206,7 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
         eta_effective = 1 - (1 - eta) * (1 - P_D)**2
         trial_time = T_P + comm_time  # I don't think that paper uses latency time and loading time?
         random_num = np.random.geometric(eta_effective)
-        return random_num * trial_time, random_num
+        return random_num * trial_time#, random_num
 
     def state_generation(source):
         state = F_INIT * (mat.phiplus @ mat.H(mat.phiplus)) + \
@@ -241,5 +254,6 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1)
 
 
 if __name__ == "__main__":
+    # np.random.seed(14725234)
     res = run(length=22000, max_iter=100, params={"P_LINK": 0.5, "T_DP": 0.2, "F_INIT": 0.95}, num_memories=2, epp_steps=1)
     print(res.data)
