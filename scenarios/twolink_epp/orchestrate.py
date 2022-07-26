@@ -38,7 +38,7 @@ if __name__ == "__main__":
             nparts = case_definition.num_parts(case)
             for part_index in range(nparts):
                 if not os.path.exists(os.path.join(output_path, f"part{part_index}.csv")):
-                    parts_to_run += [part_index]
+                    parts_to_run += [str(part_index)]
             if not parts_to_run:
                 print(f"No parts for case {args.case} found that need to be run. Use --runexisting to run anyway.")
                 sys.exit(0)
@@ -46,8 +46,6 @@ if __name__ == "__main__":
                 array_entry = f"0-{nparts-1}"
             else:
                 array_entry = ",".join(parts_to_run)
-            print(array_entry)
-            quit()
         else:
             nparts = case_definition.num_parts(case)
             if nparts % args.bundle != 0:
