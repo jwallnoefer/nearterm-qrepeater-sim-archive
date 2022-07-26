@@ -29,8 +29,8 @@ for name, case_list in grouped_dict.items():
             marker = "x"
         else:
             marker = "o"
-        # plt.scatter(res.index, res["key_per_time"], marker=marker, s=10, label=subcase_name)
-        plt.scatter(res.index, res["fidelity"], marker=marker, s=10, label=subcase_name)
+        plt.scatter(res.index, res["key_per_time"], marker=marker, s=10, label=subcase_name)
+        # plt.scatter(res.index, res["fidelity"], marker=marker, s=10, label=subcase_name)
     plt.yscale("log")
     plt.grid()
     plt.title(name)

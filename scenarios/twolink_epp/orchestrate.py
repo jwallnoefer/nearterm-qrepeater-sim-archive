@@ -17,12 +17,13 @@ if __name__ == "__main__":
     # parser.add_argument("base_path", help="Where the results will be stored.")
     parser.add_argument("case", type=int, help="the case number")
     parser.add_argument("--time", required=True, help="specify time in DAYS-HH:MM:SS format")
-    parser.add_argument("--parts", help="optionally, specify just some parts using sbatch --array syntax. Default: run all")
+    parser.add_argument("--parts", help="optionally, specify just some parts using sbatch --array syntax. Default: run all non-existing parts")
     parser.add_argument("--mem", default=2048, help="memory in MB per part run")
     parser.add_argument("--memcollect", default=1024, help="memory in MB for result collection step")
     parser.add_argument("--mailtype", default="ALL", help="mail-type option for sbatch. Default: ALL")
     parser.add_argument("--bundle", type=int, default=1, help="how many parts to bundle in one slurm job, works only if --parts is not specified and the number of all parts is divisible by bundle")
     parser.add_argument("--nocollect", default=False, action="store_const", const=True, help="Set this flag to skip the collection step. Useful if many orchestrates are launched at the same time and collection is handled via a supercase.")
+    parser.add_argument("--runexisting", default=False, action="store_const", const=True, help="Set this flag to also run parts that already have results. If this is not specified and neither --bundle nor --parts are used, it avoids creating jobs for these parts in the first place.")
     args = parser.parse_args()
     case = args.case
     case_name = case_definition.name(case)
@@ -31,18 +32,38 @@ if __name__ == "__main__":
     subcase_path = os.path.join(case_path, subcase_name)
     job_name = subcase_name + "_" + case_name
     if args.parts is None:
-        nparts = case_definition.num_parts(case)
-        if nparts % args.bundle != 0:
-            raise ValueError(f"The number of parts {nparts} must be divisible by --bundle {args.bundle}")
-        num_array_jobs = nparts // args.bundle
-        array_entry = f"0-{num_array_jobs - 1}"
+        if args.bundle == 1 and not args.runexisting:
+            output_path = os.path.join(subcase_path, "parts")
+            parts_to_run = []
+            nparts = case_definition.num_parts(case)
+            for part_index in range(nparts):
+                if not os.path.exists(os.path.join(output_path, f"part{part_index}.csv")):
+                    parts_to_run += [part_index]
+            if not parts_to_run:
+                print(f"No parts for case {args.case} found that need to be run. Use --runexisting to run anyway.")
+                sys.exit(0)
+            if len(parts_to_run) == nparts:
+                array_entry = f"0-{nparts-1}"
+            else:
+                array_entry = ",".join(parts_to_run)
+            print(array_entry)
+            quit()
+        else:
+            nparts = case_definition.num_parts(case)
+            if nparts % args.bundle != 0:
+                raise ValueError(f"The number of parts {nparts} must be divisible by --bundle {args.bundle}")
+            num_array_jobs = nparts // args.bundle
+            array_entry = f"0-{num_array_jobs - 1}"
     else:
         if args.bundle != 1:
-            raise ValueError(f"--bundle only works if --parts is not specified. Was called with --bundle {bundle} and --parts {args.parts}")
+            raise ValueError(f"--bundle only works if --parts is not specified. Was called with --bundle {args.bundle} and --parts {args.parts}")
         array_entry = args.parts
     with open("environment_setup.txt", "r") as f:
         environment_setup_string = f.read()
-    run_string = f"pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case}"
+    if args.runexisting:
+        run_string = f"pipenv run python scenarios/twolink_epp/run_two_link_epp.py --runexisting {subcase_path} {case}"
+    else:
+        run_string = f"pipenv run python scenarios/twolink_epp/run_two_link_epp.py {subcase_path} {case}"
     if args.bundle == 1:
         run_instructions = f"{run_string} $SLURM_ARRAY_TASK_ID"
     else:
