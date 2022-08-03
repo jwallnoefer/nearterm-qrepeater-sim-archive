@@ -13,7 +13,7 @@ numpy = "*"
 pandas = "*"
 matplotlib = "*"
 scipy = "*"
-requsim = {version="==0.1.dev83", index="test_pypi"}
+requsim = {version="==0.1.dev87", index="test_pypi"}
 
 [dev-packages]
 pycairo = "*"
