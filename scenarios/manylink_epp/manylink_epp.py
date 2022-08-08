@@ -4,8 +4,10 @@ import pandas as pd
 from functools import lru_cache
 from requsim.world import World
 from requsim.quantum_objects import Station, SchedulingSource
-from requsim.events import SourceEvent, EntanglementPurificationEvent
-from requsim.events import EntanglementSwappingEvent as entswapevent
+from requsim.events import SourceEvent
+from requsim.events import EntanglementPurificationEvent
+from requsim.events import EntanglementSwappingEvent
+from requsim.events import EventQueue
 from requsim.noise import NoiseModel, NoiseChannel
 from requsim.tools.protocol import Protocol
 from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
@@ -15,14 +17,6 @@ from warnings import warn
 from requsim.libs.aux_functions import apply_single_qubit_map, distance
 import requsim.libs.matrix as mat
 from requsim.tools.noise_channels import y_noise_channel, z_noise_channel, w_noise_channel
-
-
-class EntanglementSwappingEvent(entswapevent):
-    def resolve(self):
-        ret_value = super().resolve()
-        if ret_value["resolve_successful"] is False:
-            print(self.__dict__)
-        return ret_value
 
 
 def construct_dephasing_noise_channel(dephasing_time):
@@ -318,6 +312,7 @@ class ManylinkProtocol(Protocol):
                 has_overflowed = self._check_station_overflow(station)
                 if has_overflowed:
                     self._check_new_source_events(station)
+            for station in stations:
                 self._check_epp(station)
                 self._check_swapping(station)
         elif message["event_type"] == "SourceEvent" and message["resolve_successful"] is False:
@@ -334,10 +329,11 @@ class ManylinkProtocol(Protocol):
                 self._check_swapping(station)
             self._check_long_distance_pair()
         elif message["event_type"] == "EntanglementSwappingEvent" and message["resolve_successful"] is False:
-            # warn("An EntanglementSwappingEvent has resolved unsuccessfully. Trying to recover.")
-            # for station in self.stations:
-            #     self._check_swapping(station)
-            pass
+            # if multiple swappings have been scheduled at the same time, the
+            # second one will not find the pair object anymore
+            # therefore:
+            for station in self.stations:
+                self._check_swapping(station)
         elif message["event_type"] == "UnblockEvent" and message["resolve_successful"] is True:
             pair = message["unblocked_objects"][0]
             for qubit in pair.qubits:
@@ -356,10 +352,7 @@ class ManylinkProtocol(Protocol):
             for station in stations:
                 self._check_epp(station)
         else:
-            print(f"Unrecognized message type encountered: {message}")
-            # warn(f"Unrecognized message type encountered: {message}")
-            from code import interact
-            interact(local=locals())
+            warn(f"Unrecognized message type encountered: {message}")
 
 
 def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, lowest_level_epp_steps=1, measure_asap=True):
@@ -423,6 +416,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
     world = World()
+    world.event_queue = EventQueue()
     station_A = Station(world, position=station_positions[0], memory_noise=None,
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
@@ -455,8 +449,8 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     # from code import interact
     # interact(local=locals())
     current_message = None
-    from code import interact
-    interact(local=locals())
+    # from code import interact
+    # interact(local=locals())
     while len(protocol.time_list) < max_iter:
         protocol.check(current_message)
         try:
@@ -478,7 +472,7 @@ if __name__ == "__main__":
     for num_links in x:
         print(num_links)
         start_time = time()
-        res = run(length=220000, max_iter=max_iter,
+        res = run(length=300000, max_iter=max_iter,
                   params={"T_DP": 25, "F_INIT": 0.95},
                   num_links=num_links, num_memories=4,
                   lowest_level_epp_steps=2)
