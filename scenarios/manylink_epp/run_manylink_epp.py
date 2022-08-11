@@ -1,13 +1,13 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import argparse
 import scenarios.manylink_epp.case_definition as case_definition
-from scenarios.manylink_epp.two_link_epp import run as run_epp
+from scenarios.manylink_epp.manylink_epp import run as run_epp
 from requsim.tools.evaluation import standard_bipartite_evaluation
 import pandas as pd
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run an epp_twolink case.")
+    parser = argparse.ArgumentParser(description="Run an manylink_epp case.")
     parser.add_argument("result_path", help="Path to case specific result directory.")
     parser.add_argument("case", type=int, help="The case number as defined in case_defition.")
     parser.add_argument("part", type=int, nargs="?", help="Which part of the case to run.")

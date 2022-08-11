@@ -1,7 +1,7 @@
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import matplotlib.pyplot as plt
 import pandas as pd
-import scenarios.manylink.case_definition as case_definition
+import scenarios.manylink_epp.case_definition as case_definition
 from collections import defaultdict
 
 result_path = os.path.join("results", "manylink_epp")
