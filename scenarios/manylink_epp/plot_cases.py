@@ -20,9 +20,13 @@ for name, case_list in grouped_dict.items():
         try:
             res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
         except FileNotFoundError as e:
-            print(e)
+            # print(e)
             continue
-        plt.scatter(res.index, res["key_per_time"], s=5, label=subcase_name)
+        try:
+            plt.scatter(res.index, res["key_per_time"], s=5, label=subcase_name)
+        except KeyError:
+            print(subcase_name)
+            print(res)
     plt.yscale("log")
     plt.grid()
     plt.title(name)
