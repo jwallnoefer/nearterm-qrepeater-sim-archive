@@ -143,189 +143,6 @@ case_specification = {
 }
 cases.update({len(cases): case_specification})
 
-# # # now start developing code for a 2d plot
-# start_case = 6
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 450e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": "2d_plot_100_memories",
-#         "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": 4,
-#                              "epp_steps": 0,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print("case_count after 2d", len(cases))
-#
-# # # now start developing code for a 2d plot
-# start_case = len(cases)  # currently 227
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 450e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": "2d_plot_100_memories",
-#         "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": 4,
-#                              "epp_steps": 1,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print("case_count after epp", len(cases))  # 448
-#
-#
-# # now do the same thing with fewer memories, which may be easier for the paper
-# start_case = len(cases)
-# num_memories = 2
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 350e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": f"2d_plot_{num_memories}_memories",
-#         "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": num_memories,
-#                              "epp_steps": 0,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print(f"case_count after 2d_plot_{num_memories}_memories", len(cases))
-#
-#
-# # now do the same thing with fewer memories, which may be easier for the paper
-# start_case = len(cases)
-# num_memories = 2
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 350e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": f"2d_plot_{num_memories}_memories",
-#         "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": num_memories,
-#                              "epp_steps": 1,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print(f"case_count after epp_2d_plot_{num_memories}_memories", len(cases))
-#
-#
-# # try four memories
-# start_case = len(cases)
-# num_memories = 4
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 400e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": f"2d_plot_{num_memories}_memories",
-#         "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": num_memories,
-#                              "epp_steps": 0,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print(f"case_count after 2d_plot_{num_memories}_memories", len(cases))
-#
-#
-# # try four memories
-# start_case = len(cases)
-# num_memories = 4
-# fidelities = np.linspace(0.92, 1.00, num=17)
-# memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
-# num_parts = 128
-# lengths = np.linspace(1, 400e3, num=num_parts)
-# for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
-#     case_specification = {
-#         "name": f"2d_plot_{num_memories}_memories",
-#         "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
-#         "num_parts": num_parts,
-#         "index": lengths,
-#         "case_args": {part: {"length": lengths[part],
-#                              "max_iter": 1e5,
-#                              "params": {"P_LINK": 0.5,
-#                                         "T_DP": memory_time,
-#                                         "F_INIT": fid,
-#                                         "P_D": 1e-6
-#                                         },
-#                              "num_memories": num_memories,
-#                              "epp_steps": 1,
-#                              }
-#                       for part in range(num_parts)
-#                       }
-#     }
-#     cases.update({case: case_specification})
-# if __name__ == "__main__":
-#     print(f"case_count after epp_2d_plot_{num_memories}_memories", len(cases))
-
-
 # let's look at cutoff times
 f_init = 0.93
 t_dp = 100e-3
@@ -542,6 +359,61 @@ for cutoff_multiplier in cutoff_multipliers:
                       }
     }
     cases.update({len(cases): case_specification})
+if __name__ == "__main__":
+    print(f"Case {case_name} ends at case number", len(cases))
+
+# 2d supercase
+case_name = "2d_plot_4_memories"
+start_case = len(cases)
+if __name__ == "__main__":
+    print(f"Case {case_name} starts at case number {start_case}\nStart these using the supercase, not directly via orchestrate.")
+fidelities = np.linspace(0.92, 1.00, num=17)
+memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
+num_parts = 128
+lengths = np.linspace(1, 350e3, num=num_parts)
+for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
+    case_specification = {
+        "name": case_name,
+        "subcase_name": f"f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
+        "num_parts": num_parts,
+        "index": lengths,
+        "case_args": {part: {"length": lengths[part],
+                             "max_iter": 1e5,
+                             "params": {"P_LINK": 0.5,
+                                        "T_DP": memory_time,
+                                        "F_INIT": fid,
+                                        "P_D": 1e-6
+                                        },
+                             "num_memories": 4,
+                             "epp_steps": 0,
+                             }
+                      for part in range(num_parts)
+                      }
+    }
+    cases.update({case: case_specification})
+start_case = len(cases)
+if __name__ == "__main__":
+    print(f"{case_name} WITH EPP starts at case number {start_case}\nStart these using the supercase, not directly via orchestrate.")
+for case, (fid, memory_time) in zip(it.count(start_case), it.product(fidelities, memory_times)):
+    case_specification = {
+        "name": case_name,
+        "subcase_name": f"epp_f{int(fid * 1000)}_tdp{memory_time * 1e3:.2f}",
+        "num_parts": num_parts,
+        "index": lengths,
+        "case_args": {part: {"length": lengths[part],
+                             "max_iter": 1e5,
+                             "params": {"P_LINK": 0.5,
+                                        "T_DP": memory_time,
+                                        "F_INIT": fid,
+                                        "P_D": 1e-6
+                                        },
+                             "num_memories": 4,
+                             "epp_steps": 1,
+                             }
+                      for part in range(num_parts)
+                      }
+    }
+    cases.update({case: case_specification})
 if __name__ == "__main__":
     print(f"Case {case_name} ends at case number", len(cases))
 
