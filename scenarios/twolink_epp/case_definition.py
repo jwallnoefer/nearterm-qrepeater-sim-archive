@@ -19,7 +19,7 @@ case_specification = {
                                     "F_INIT": 0.96,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 0,
                          }
                   for part in range(num_parts)
@@ -42,7 +42,7 @@ case_specification = {
                                     "F_INIT": 0.96,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 1,
                          }
                   for part in range(num_parts)
@@ -65,7 +65,7 @@ case_specification = {
                                     "F_INIT": 0.96,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 2,
                          }
                   for part in range(num_parts)
@@ -88,7 +88,7 @@ case_specification = {
                                     "F_INIT": 0.93,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 0,
                          }
                   for part in range(num_parts)
@@ -111,7 +111,7 @@ case_specification = {
                                     "F_INIT": 0.93,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 1,
                          }
                   for part in range(num_parts)
@@ -135,7 +135,7 @@ case_specification = {
                                     "F_INIT": 0.93,
                                     "P_D": 1e-6
                                     },
-                         "num_memories": 100,
+                         "num_memories": 4,
                          "epp_steps": 2,
                          }
                   for part in range(num_parts)
@@ -162,7 +162,7 @@ cases.update({len(cases): case_specification})
 #                                         "F_INIT": fid,
 #                                         "P_D": 1e-6
 #                                         },
-#                              "num_memories": 100,
+#                              "num_memories": 4,
 #                              "epp_steps": 0,
 #                              }
 #                       for part in range(num_parts)
@@ -191,7 +191,7 @@ cases.update({len(cases): case_specification})
 #                                         "F_INIT": fid,
 #                                         "P_D": 1e-6
 #                                         },
-#                              "num_memories": 100,
+#                              "num_memories": 4,
 #                              "epp_steps": 1,
 #                              }
 #                       for part in range(num_parts)
@@ -480,7 +480,7 @@ case_name = f"compare_cutoff_{int(t_dp * 1e3)}_f{int(f_init * 1e3)}"
 cutoff_multipliers = [0.05, 0.1, 0.15, 0.20, 0.25, 0.3, 0.35, 0.4, None]
 num_memories = 2
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 350e3, num=num_parts)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
 for cutoff_multiplier in cutoff_multipliers:
@@ -512,6 +512,7 @@ for cutoff_multiplier in cutoff_multipliers:
                       }
     }
     cases.update({len(cases): case_specification})
+cutoff_multipliers = [0.05, 0.1, 0.15, 0.20, 0.25, 0.3, 0.35, 0.4, None, 0.45, 0.5]
 for cutoff_multiplier in cutoff_multipliers:
     try:
         label = str(int(cutoff_multiplier * 1e3))

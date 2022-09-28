@@ -271,9 +271,9 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1,
 if __name__ == "__main__":
     from time import time
     start_time = time()
-    max_iter = 100
+    max_iter = 2500
     # np.random.seed(14725234)
-    res = run(length=283e3, max_iter=max_iter, params={"P_LINK": 0.5, "T_DP": 1.0, "F_INIT": 0.925, "P_D": 1e-6}, cutoff_time=400e-3, num_memories=2, epp_steps=1)
+    res = run(length=1e3, max_iter=max_iter, params={"P_LINK": 0.5, "T_DP": 1.0, "F_INIT": 0.925, "P_D": 1e-6}, cutoff_time=400e-3, num_memories=2, epp_steps=1)
     print(res.data)
     res.world.print_status()
     res.world.event_queue.print_stats()

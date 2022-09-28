@@ -35,6 +35,6 @@ for name, case_list in grouped_dict.items():
     plt.grid()
     plt.title(name)
     plt.ylabel("key_per_time")
-    plt.legend()
+    plt.legend(ncol=2, loc="upper center", prop={'size': 6})
     plt.savefig(os.path.join(result_path, f"{name}.pdf"))
     plt.show()
