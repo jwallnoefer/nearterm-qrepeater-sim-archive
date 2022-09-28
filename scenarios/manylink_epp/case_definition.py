@@ -88,9 +88,14 @@ case_name = "compare_num_links_f_990"
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
 link_iter = [2, 4, 8, 16, 32, 64, 128]
-num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
 for num_links in link_iter:
+    if num_links == 8:
+        num_parts = 128 + 64
+        end_point = 1 + (300e3 - 1) / 127 * (num_parts - 1)
+        lengths = np.linspace(1, end_point, num=num_parts)
+    else:
+        num_parts = 128
+        lengths = np.linspace(1, 300e3, num=num_parts)
     case_specification = {
         "name": case_name,
         "subcase_name": f"num_link_{num_links}",
@@ -117,6 +122,13 @@ link_iter = [2, 4, 8, 16, 32, 64, 128]
 num_parts = 128
 lengths = np.linspace(1, 300e3, num=num_parts)
 for num_links in link_iter:
+    if num_links in [8, 16, 32]:
+        num_parts = 128 + 64
+        end_point = 1 + (300e3 - 1) / 127 * (num_parts - 1)
+        lengths = np.linspace(1, end_point, num=num_parts)
+    else:
+        num_parts = 128
+        lengths = np.linspace(1, 300e3, num=num_parts)
     case_specification = {
         "name": case_name,
         "subcase_name": f"epp_num_link_{num_links}",

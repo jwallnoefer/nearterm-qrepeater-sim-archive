@@ -16,17 +16,23 @@ for case, name in case_and_names:
 for name, case_list in grouped_dict.items():
     for case in case_list:
         subcase_name = case_definition.subcase_name(case)
+        print(subcase_name)
         subcase_path = os.path.join(result_path, name, subcase_name)
         try:
             res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
         except FileNotFoundError as e:
             # print(e)
             continue
+        if subcase_name[0:3] == "epp":
+            marker = "x"
+        else:
+            marker = "o"
         try:
-            plt.scatter(res.index, res["key_per_time"], s=5, label=subcase_name)
+            plt.scatter(res.index, res["key_per_time"], s=5, marker=marker, label=subcase_name)
         except KeyError:
             print(subcase_name)
             print(res)
+            continue
     plt.yscale("log")
     plt.grid()
     plt.title(name)
