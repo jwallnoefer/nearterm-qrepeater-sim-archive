@@ -7,14 +7,8 @@ import matplotlib.pyplot as plt
 
 base_path = os.path.join("results", "twolink_epp")
 
-# no_epp_cases = np.arange(6, 227)
-# epp_cases = np.arange(227, 448)
-# no_epp_cases = np.arange(448, 669)
-# epp_cases = np.arange(669, 890)
-# no_epp_cases = np.arange(890, 1111)
-# epp_cases = np.arange(1111, 1332)
-no_epp_cases = np.arange(1368, 1377)
-epp_cases = np.arange(1377, 1386)
+no_epp_cases = np.arange(62, 283)
+epp_cases = np.arange(283, 504)
 
 
 def is_always_better(no_epp_data, epp_data):
@@ -56,7 +50,7 @@ for no_epp_case, epp_case in zip(no_epp_cases, epp_cases):
         print(len(no_epp_data), len(epp_data))
         res_better += [is_always_better(no_epp_data, epp_data)]
         res_extend += [extends_range(no_epp_data, epp_data)]
-    except FileNotFoundError:
+    except (FileNotFoundError, pd.core.indexing.IndexingError):
         print("something didn't work at", no_epp_case, epp_case)
         res_better += [False]
         res_extend += [False]
@@ -79,8 +73,8 @@ plt.ylabel("initial fidelity F_INIT")
 plt.show()
 
 lim = np.max(np.abs(res_extend))
-# pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
-pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu")
+pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
+# pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu")
 import itertools
 aux_x = []
 aux_y = []
