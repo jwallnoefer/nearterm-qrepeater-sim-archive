@@ -460,6 +460,36 @@ for cutoff_multiplier in cutoff_multipliers:
 if __name__ == "__main__":
     print(f"Additional cases for Case {case_name} ends at case number", len(cases))
 
+# more simple cases for nicer plots
+num_parts = 128
+lengths = np.linspace(1, 200e3, num=num_parts)
+fidelities = [0.925, 0.935, 0.94, 0.95]
+for f_init in fidelities:
+    case_name = f"with_pd_f_{int(f_init * 1e3)}"
+    if __name__ == "__main__":
+        print(f"Case {case_name} starts at case number", len(cases))
+    for epp_steps in [0, 1, 2]:
+        case_specification = {
+            "name": case_name,
+            "subcase_name": f"{epp_steps}_epp",
+            "num_parts": num_parts,
+            "index": lengths,
+            "case_args": {part: {"length": lengths[part],
+                                 "max_iter": 1e5,
+                                 "params": {"P_LINK": 0.5,
+                                            "T_DP": 100e-3,
+                                            "F_INIT": f_init,
+                                            "P_D": 1e-6
+                                            },
+                                 "num_memories": 4,
+                                 "epp_steps": epp_steps,
+                                 }
+                          for part in range(num_parts)
+                          }
+        }
+        cases.update({len(cases): case_specification})
+    if __name__ == "__main__":
+        print(f"Case {case_name} ends at case number", len(cases))
 
 num_cases = len(cases)
 
