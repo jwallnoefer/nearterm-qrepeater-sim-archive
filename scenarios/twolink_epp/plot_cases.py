@@ -8,13 +8,8 @@ result_path = os.path.join("results", "twolink_epp")
 
 # step through cases by name to group them into plots
 case_and_names = [(case, case_definition.name(case)) for case in range(case_definition.num_cases)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1332, 1350)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1332, 1341)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1341, 1350)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1368, 1377)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1377, 1386)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1350, 1359)]
-# case_and_names = [(case, case_definition.name(case)) for case in range(1359, 1368)]
+# case_and_names = [(case, case_definition.name(case)) for case in range(508, 520)]
+
 grouped_dict = defaultdict(list)
 for case, name in case_and_names:
     grouped_dict[name].append(case)

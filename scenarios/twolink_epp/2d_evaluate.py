@@ -27,9 +27,9 @@ def extends_range(no_epp_data, epp_data):
     epp_idx = epp_series > 0
     epp_reachable = epp_series[epp_idx].index[-1]
 
-    # return epp_reachable - no_epp_reachable
-    return epp_reachable > no_epp_reachable
-    # return epp_reachable / no_epp_reachable
+    return epp_reachable - no_epp_reachable
+    # return epp_reachable > no_epp_reachable
+    # return 1 - epp_reachable / no_epp_reachable
 
 
 res_better = []
@@ -72,9 +72,9 @@ plt.xlabel("dephasing time T_DP")
 plt.ylabel("initial fidelity F_INIT")
 plt.show()
 
-lim = np.max(np.abs(res_extend))
-pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
-# pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu")
+lim = np.max(np.abs(res_extend / 1e3))
+pcm = plt.pcolormesh(memory_times, fidelities, res_extend / 1e3, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
+# pcm = plt.pcolormesh(memory_times, fidelities, res_extend , shading="nearest", cmap="RdBu")
 import itertools
 aux_x = []
 aux_y = []
