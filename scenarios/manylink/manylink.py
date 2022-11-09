@@ -333,12 +333,13 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
 
 if __name__ == "__main__":
     from time import time
-    max_iter = 10
+    np.random.seed(8154242)
+    max_iter = 50
     # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
-    x = [2, 4, 8, 16, 32, 64, 128]
+    x = [2, 4, 8, 16, 32, 64, 128, 256, 512]
     y = []
     for num_links in x:
-        print(num_links)
+        # print(num_links)
         start_time = time()
         res = run(length=22000, max_iter=max_iter,
                   params={"T_DP": 25, "F_INIT": 0.95},
@@ -347,6 +348,7 @@ if __name__ == "__main__":
         # print(f"{num_links=} took {time() - start_time} seconds.")
         time_interval = (time() - start_time) / max_iter
         y += [time_interval]
+        print(num_links, f"{time_interval:.3f}")
     import matplotlib.pyplot as plt
     plt.plot(x, y)
     plt.xlabel("num_links")

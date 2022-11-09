@@ -105,8 +105,9 @@ plt.savefig(save_path)
 print(f"Plot saved at {save_path}")
 
 
-
 # The 2d plot
+new_colors = ["#55193B", "#AA3377", "#FFFFFF", "#4477AA", "#223B55"]
+mycmap = mpl.colors.LinearSegmentedColormap.from_list("mycmap", new_colors)
 no_epp_cases = np.arange(62, 283)
 epp_cases = np.arange(283, 504)
 
@@ -146,15 +147,15 @@ for no_epp_case, epp_case in zip(no_epp_cases, epp_cases):
 fidelities = np.linspace(0.92, 1.00, num=17)
 memory_times = np.logspace(-3, 0, num=13)  # 1 ms to 1 second
 
-res_extend = np.array(res_extend, dtype=int).reshape((len(fidelities), len(memory_times))) / 1e3
+res_extend = np.array(res_extend, dtype=float).reshape((len(fidelities), len(memory_times))) / 1e3
 
 fig = formatter.figure(width_ratio=1.0, wide=False)
 lim = np.max(np.abs(res_extend))
-pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap="RdBu", vmin=-lim, vmax=lim)
+pcm = plt.pcolormesh(memory_times, fidelities, res_extend, shading="nearest", cmap=mycmap, vmin=-lim, vmax=lim)
 
 plt.xscale("log")
 plt.xlim(0.8*10**-3, 1.2)
-plt.xlabel("Dephasing time $T_\mathrm{dp}$")
+plt.xlabel("Dephasing time $T_\mathrm{dp}$ [s]")
 plt.ylabel("Initial fidelity $F_\mathrm{init}$")
 cbar = plt.colorbar(pcm)
 cbar.ax.set_ylabel("Additional distance [km]")
