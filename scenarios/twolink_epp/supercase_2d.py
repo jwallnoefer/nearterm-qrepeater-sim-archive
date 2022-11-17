@@ -34,7 +34,7 @@ for case in epp_cases:
         continue
     subprocess.run(["pipenv", "run", "python",
                     os.path.join(path, "orchestrate.py"),
-                    "--time", "0-18:00:00", "--mailtype", "FAIL,TIME_LIMIT",
+                    "--time", "1-00:00:00", "--mailtype", "FAIL,TIME_LIMIT",
                     "--bundle", "16", f"{case}"])
     print(f"Finished submitting case {case}.")
     sleep(3)
