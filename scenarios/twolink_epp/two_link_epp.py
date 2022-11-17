@@ -224,9 +224,10 @@ def run(length, max_iter, params, cutoff_time=None, num_memories=2, epp_steps=1,
                                     mat.psiminus @ mat.H(mat.psiminus)
                                     )
         comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
-        storage_time = 2 * comm_distance / C
+        trial_time = 2 * comm_distance / C
         for idx, station in enumerate(source.target_stations):
             if station.memory_noise is not None:  # dephasing that has accrued while other qubit was travelling
+                storage_time = trial_time - distance(source, station) / C  # qubit is in storage for varying amounts of time
                 state = apply_single_qubit_map(map_func=station.memory_noise, qubit_index=idx, rho=state, t=storage_time)
             if station.dark_count_probability is not None:  # dark counts are handled here because the information about eta is needed for that
                 eta = P_LINK * np.exp(-comm_distance / L_ATT)
