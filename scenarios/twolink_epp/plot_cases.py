@@ -19,7 +19,10 @@ for name, case_list in grouped_dict.items():
     for case in case_list:
         subcase_name = case_definition.subcase_name(case)
         subcase_path = os.path.join(result_path, name, subcase_name)
-        res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
+        try:
+            res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
+        except FileNotFoundError:
+            continue
         if subcase_name[0:3] == "epp":
             marker = "x"
         else:
