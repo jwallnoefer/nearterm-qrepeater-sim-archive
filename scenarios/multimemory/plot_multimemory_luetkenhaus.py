@@ -2,11 +2,19 @@ import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from scenarios.multimemory.run_multimemory_luetkenhaus import params, F, P_BSM
 # from scipy.stats import binom
 from scipy.special import binom as binomial_coefficient
 from libs.aux_functions import binary_entropy
+import rsmf
 
+# colorblind friendly color set taken from https://personal.sron.nl/~pault/
+colors = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB']
+# make them the standard colors for matplotlib
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
+
+formatter = rsmf.setup(r"\documentclass{revtex4-2}")
 # copying the formulas in the paper
 
 L_ATT = 22 * 10**3
@@ -145,6 +153,8 @@ def entropy_term(L, num_memories):
         + (1 - lambda_bsm * alpha_of_eta(eta)**2) / 2
     return (1 - binary_entropy(e_X) - F * binary_entropy(e_Z))
 
+
+fig = formatter.figure()
 x = np.linspace(0, 500e3, num=200)
 memories = [1, 10, 100, 400, 1000]
 for memory in memories:
@@ -155,33 +165,59 @@ for memory in memories:
     df = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
     xx = df.index / 1000
     yy = df["key_per_resource"] / 2
-    plt.scatter(xx, yy, s=10)
+    plt.scatter(xx, yy, s=1.5)
 plt.plot(x / 1000, [c_loss(length, 0) for length in x], ls="dashed", color="orange")
 plt.plot(x / 1000, [c_loss(length, 1) for length in x], ls="dashed", color="gray")
 plt.yscale("log")
-plt.ylim(1e-12, 1e1)
+plt.ylim(1e-10, 1e-2)
 plt.xlabel("Distance [km]")
 plt.ylabel("key per channel use")
 plt.grid()
-plt.legend(loc="upper right")
+# plt.legend(loc="upper right")
+plt.tight_layout()
 plt.savefig(os.path.join(result_path, "comparison.png"))
-plt.show()
+plt.savefig(os.path.join(result_path, "comparison.pdf"))
+plt.cla()
 
-x = np.linspace(0, 800e3, num=200)
+fig = formatter.figure()
+x = np.linspace(0, 500e3, num=200)
+memories = [1, 10, 100, 400, 1000]
 for memory in memories:
     print(memory)
-    y = [inverse_channel_use(length, memory) for length in x]
+    y = [R(L=length, num_memories=memory) for length in x]
     plt.plot(x / 1000, y, label=f"num_memories={memory}")
+    output_path = os.path.join(result_path, f"{memory}_memories")
+    df = pd.read_csv(os.path.join(output_path, "result.csv"), index_col=0)
+    xx = df.index / 1000
+    yy = df["key_per_resource"] / 2
+    plt.scatter(xx, yy, s=1.5)
 plt.yscale("log")
+plt.xlim(-5, 115)
+plt.ylim(1e-4, 3e-3)
+plt.xlabel("Distance [km]")
+plt.ylabel("key per channel use")
 plt.grid()
-plt.legend()
-plt.show()
+# plt.legend(loc="upper right")
+plt.tight_layout()
+plt.savefig(os.path.join(result_path, "crossings.png"))
+plt.savefig(os.path.join(result_path, "crossings.pdf"))
+plt.cla()
 
-x = np.linspace(0, 800e3, num=200)
-for memory in memories:
-    print(memory)
-    y = [entropy_term(length, memory) for length in x]
-    plt.plot(x / 1000, y, label=f"num_memories={memory}")
-plt.grid()
-plt.legend()
-plt.show()
+# x = np.linspace(0, 800e3, num=200)
+# for memory in memories:
+#     print(memory)
+#     y = [inverse_channel_use(length, memory) for length in x]
+#     plt.plot(x / 1000, y, label=f"num_memories={memory}")
+# plt.yscale("log")
+# plt.grid()
+# plt.legend()
+# plt.show()
+#
+# x = np.linspace(0, 800e3, num=200)
+# for memory in memories:
+#     print(memory)
+#     y = [entropy_term(length, memory) for length in x]
+#     plt.plot(x / 1000, y, label=f"num_memories={memory}")
+# plt.grid()
+# plt.legend()
+# plt.show()
