@@ -323,10 +323,9 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=1):
         protocol.check(current_message)
         try:
             current_message = world.event_queue.resolve_next_event()
-        except IndexError:
+        except IndexError as e:
             world.print_status()
-            from code import interact
-            interact(local=locals())
+            raise e
 
     return protocol
 
