@@ -1,6 +1,9 @@
 # Simulation for near-term quantum repeaters
 
 
+[![DOI](https://zenodo.org/badge/573417154.svg)](https://zenodo.org/badge/latestdoi/573417154)
+
+
 This repository is an archive for the code used in:
 
 > ReQuSim: Faithfully simulating near-term quantum repeaters <br>
