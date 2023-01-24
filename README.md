@@ -8,7 +8,7 @@ This repository is an archive for the code used in:
 
 > ReQuSim: Faithfully simulating near-term quantum repeaters <br>
 > J. Wallnöfer, F. Hahn, F. Wiesner, N. Walk, J. Eisert <br>
-> Pre-print: on arXiv soon
+> Preprint: [arXiv:2212.03896 [quant-ph]](https://doi.org/10.48550/arXiv.2212.03896)
 
 ## Repository structure
 
