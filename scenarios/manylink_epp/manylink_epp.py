@@ -416,8 +416,14 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
     world = World()
+    if lowest_level_epp_steps == 0 and measure_asap is True:
+        def end_station_noise():
+            return None
+    else:
+        def end_station_noise():
+            return construct_dephasing_noise_channel(dephasing_time=T_DP)
     world.event_queue = EventQueue()
-    station_A = Station(world, position=station_positions[0], memory_noise=None,
+    station_A = Station(world, position=station_positions[0], memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
@@ -428,7 +434,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
                               )
                       for pos in station_positions[1:-1]
                       ]
-    station_B = Station(world, position=station_positions[-1], memory_noise=None,
+    station_B = Station(world, position=station_positions[-1], memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
