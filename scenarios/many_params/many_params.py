@@ -5,7 +5,11 @@ varied set of noise models.
 """
 
 
-import os, sys; sys.path.insert(0, os.path.abspath("."))
+import os, sys;
+
+from requsim.libs.epp import dejmps_protocol
+
+sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
 from functools import lru_cache
@@ -389,12 +393,17 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     try:
         T_DAMP = params["T_DAMP"]  # amplitude dampening channel time
     except KeyError as e:
-        raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
+        raise Exception('params["T_DAMP"] is a mandatory argument').with_traceback(e.__traceback__)
 
     def imperfect_bsm_err_func(four_qubit_state):
         rho = mat.wnoise(rho=four_qubit_state, n=1, p=P_GATE)
         rho = mat.wnoise(rho=rho, n=2, p=P_GATE)
         return rho
+
+    def noisy_epp_protocol(rho):
+        # dejmps with noisy CNOT gate
+        rho = mat.wnoise_all(rho, p=P_GATE)
+        return dejmps_protocol(rho)
 
     def time_distribution(source):
         comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
@@ -463,7 +472,8 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
                     ]
     protocol = ManylinkProtocol(world, stations, sources, num_memories=num_memories,
                                 lowest_level_epp_steps=lowest_level_epp_steps,
-                                measure_asap=measure_asap, communication_speed=C)
+                                measure_asap=measure_asap, communication_speed=C,
+                                epp_protocol=noisy_epp_protocol)
     protocol.setup()
 
     # from code import interact
