@@ -524,8 +524,10 @@ if __name__ == "__main__":
     y = np.zeros_like(x, dtype=float)
     for i, length in enumerate(x):
         print(i)
+        start_time = time()
         res = run(length=length, max_iter=max_iter, params=params, num_links=8, num_memories=8, lowest_level_epp_steps=1)
         y[i] = standard_bipartite_evaluation(res.data)[3]
+        print(f"Took {time()-start_time:.2f} seconds.")
     import matplotlib.pyplot as plt
     plt.plot(x, y)
     plt.yscale("log")
