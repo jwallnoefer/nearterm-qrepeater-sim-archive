@@ -510,23 +510,31 @@ if __name__ == "__main__":
     from time import time
     np.random.seed(8154242)
     max_iter = 1000
+    # params = {
+    #     "P_LINK": 0.01,
+    #     "T_DAMP": 100e-3,
+    #     "E_MA": 0.01,
+    #     "P_D": 1e-6,
+    #     "P_GATE": 0.99,
+    #     "F_INIT": 0.99
+    # }
     params = {
         "P_LINK": 0.01,
         "T_DAMP": 100e-3,
-        "E_MA": 0.01,
+        "E_MA": 0,
         "P_D": 1e-6,
-        "P_GATE": 0.99,
+        "P_GATE": 0.98,
         "F_INIT": 0.99
     }
     res = run(length=100e3, max_iter=max_iter, params=params, num_links=8, num_memories=8, lowest_level_epp_steps=1)
     print(res.data)
-    x = np.linspace(10, 300e3, num=10)
+    x = np.linspace(10, 50e3, num=10)
     y = np.zeros_like(x, dtype=float)
     for i, length in enumerate(x):
         print(i)
         start_time = time()
-        res = run(length=length, max_iter=max_iter, params=params, num_links=8, num_memories=8, lowest_level_epp_steps=1)
-        y[i] = standard_bipartite_evaluation(res.data)[3]
+        res = run(length=length, max_iter=max_iter, params=params, num_links=4, num_memories=2, lowest_level_epp_steps=1)
+        y[i] = standard_bipartite_evaluation(res.data)[2]
         print(f"Took {time()-start_time:.2f} seconds.")
     import matplotlib.pyplot as plt
     plt.plot(x, y)

@@ -6,20 +6,21 @@ cases = {}
 
 base_params = {
         "P_LINK": 0.01,
-        "T_DAMP": 10e-3,
+        "T_DAMP": 100e-3,
         "E_MA": 0,
         "P_D": 1e-6,
         "P_GATE": 0.98,
         "F_INIT": 0.99
     }
-num_links = 8
-num_memories = 8
+num_links = 4
+num_memories = 2
+lowest_level_epp_steps = 1
 
 
 case_name = "base_case"
 max_iter = int(1e5)
 num_parts = 128
-lengths = np.linspace(1, 300e3, num=num_parts)
+lengths = np.linspace(1, 50e3, num=num_parts)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
 case_specification = {
@@ -32,8 +33,8 @@ case_specification = {
                          "params": base_params,
                          "num_links": num_links,
                          "cutoff_time": None,
-                         "num_memories": 8,
-                         "lowest_level_epp_steps": 1
+                         "num_memories": num_memories,
+                         "lowest_level_epp_steps": lowest_level_epp_steps
                          }
                   for part in range(num_parts)
                   }
@@ -47,7 +48,7 @@ if __name__ == "__main__":
 case_name = "improve_memories"
 max_iter = int(1e5)
 num_parts = 128
-damping_times = np.logspace(-3, 0, num=num_parts, base=10)
+damping_times = np.logspace(-1, 1, num=num_parts, base=10)
 param_collection = []
 for t_damp in damping_times:
     params = dict(base_params)
@@ -55,7 +56,7 @@ for t_damp in damping_times:
     param_collection.append(params)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
-lengths = [50e3, 100e3, 200e3]
+lengths = [20e3, 50e3, 100e3]
 for length in lengths:
     case_specification = {
         "name": case_name,
@@ -67,7 +68,8 @@ for length in lengths:
                              "params": param_collection[part],
                              "num_links": num_links,
                              "cutoff_time": None,
-                             "num_memories": 1,
+                             "num_memories": num_memories,
+                             "lowest_level_epp_steps": lowest_level_epp_steps
                              }
                       for part in range(num_parts)
                       }
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 case_name = "improve_gates"
 max_iter = int(1e5)
 num_parts = 128
-gates = np.linspace(0.97, 1.00, num=num_parts)
+gates = np.linspace(0.98, 1.00, num=num_parts)
 param_collection = []
 for p_gate in gates:
     params = dict(base_params)
@@ -87,7 +89,7 @@ for p_gate in gates:
     param_collection.append(params)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
-lengths = [50e3, 100e3, 200e3]
+lengths = [20e3, 50e3, 100e3]
 for length in lengths:
     case_specification = {
         "name": case_name,
@@ -99,7 +101,8 @@ for length in lengths:
                              "params": param_collection[part],
                              "num_links": num_links,
                              "cutoff_time": None,
-                             "num_memories": 1,
+                             "num_memories": num_memories,
+                             "lowest_level_epp_steps": lowest_level_epp_steps
                              }
                       for part in range(num_parts)
                       }
