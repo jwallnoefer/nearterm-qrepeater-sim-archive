@@ -520,10 +520,10 @@ if __name__ == "__main__":
     # }
     params = {
         "P_LINK": 0.01,
-        "T_DAMP": 100e-3,
+        "T_DAMP": 1,
         "E_MA": 0,
         "P_D": 1e-6,
-        "P_GATE": 0.98,
+        "P_GATE": 0.99,
         "F_INIT": 0.99
     }
     res = run(length=100e3, max_iter=max_iter, params=params, num_links=8, num_memories=8, lowest_level_epp_steps=1)

@@ -6,10 +6,10 @@ cases = {}
 
 base_params = {
         "P_LINK": 0.01,
-        "T_DAMP": 100e-3,
+        "T_DAMP": 1.0,
         "E_MA": 0,
         "P_D": 1e-6,
-        "P_GATE": 0.98,
+        "P_GATE": 0.99,
         "F_INIT": 0.99
     }
 num_links = 4
@@ -95,7 +95,7 @@ for length in lengths:
         "name": case_name,
         "subcase_name": f"len_{int(length/1e3)}",
         "num_parts": num_parts,
-        "index": damping_times,
+        "index": gates,
         "case_args": {part: {"length": length,
                              "max_iter": 1e5,
                              "params": param_collection[part],
