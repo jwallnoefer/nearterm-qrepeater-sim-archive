@@ -56,7 +56,7 @@ for t_damp in damping_times:
     param_collection.append(params)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
-lengths = [20e3, 50e3, 100e3]
+lengths = [20e3, 35e3, 50e3, 75e3, 100e3]
 for length in lengths:
     case_specification = {
         "name": case_name,
@@ -89,7 +89,7 @@ for p_gate in gates:
     param_collection.append(params)
 if __name__ == "__main__":
     print(f"Case {case_name} starts at case number", len(cases))
-lengths = [20e3, 50e3, 100e3]
+lengths = [20e3, 35e3, 50e3, 75e3, 100e3]
 for length in lengths:
     case_specification = {
         "name": case_name,
