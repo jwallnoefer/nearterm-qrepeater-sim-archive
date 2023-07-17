@@ -26,9 +26,8 @@ for case, name in case_and_names:
 
 case_name = "improve_memories"
 case_list = grouped_dict[case_name]
-colors = color_list[:3]
 fig = formatter.figure(width_ratio=1.0, wide=False)
-for (case, color) in zip(grouped_dict[case_name], colors):
+for (case, color) in zip(grouped_dict[case_name], color_list):
     subcase_name = case_definition.subcase_name(case)
     subcase_path = os.path.join(result_path, case_name, subcase_name)
     res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
@@ -50,9 +49,8 @@ print(f"Plot saved at {save_path}")
 
 case_name = "improve_gates"
 case_list = grouped_dict[case_name]
-colors = color_list[:3]
 fig = formatter.figure(width_ratio=1.0, wide=False)
-for (case, color) in zip(grouped_dict[case_name], colors):
+for (case, color) in zip(grouped_dict[case_name], color_list):
     subcase_name = case_definition.subcase_name(case)
     subcase_path = os.path.join(result_path, case_name, subcase_name)
     res = pd.read_csv(os.path.join(subcase_path, "result.csv"), index_col=0)
