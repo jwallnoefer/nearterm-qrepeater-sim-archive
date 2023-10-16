@@ -1,3 +1,10 @@
+"""An additional scenario expanding on manylink_epp with a more involved noise model.
+
+The aim is to showcase the flexibility of ReQuSim when it comes to including a
+varied set of noise models.
+"""
+
+
 import os, sys; sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
@@ -28,6 +35,16 @@ def construct_dephasing_noise_channel(dephasing_time):
 
     return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_channel)
 
+def construct_amplitude_damping_noise_channel(damping_parameter):
+    def gamma(t):
+        return 1 - np.exp(-t / damping_parameter)
+
+    def amplitude_damping_noise_channel(rho, t):
+        K0 = np.array([[1, 0], [0, np.sqrt(1 - gamma(t))]], dtype=complex)
+        K1 = np.array([[0, np.sqrt(gamma(t))], [0, 0]], dtype=complex])
+        return K0 @ rho @ mat.H(K0) + K1 @ rho @ mat.H(K1)
+
+    return NoiseChannel(n_qubits=1, channel_function=amplitude_damping_noise_channel)
 
 def construct_y_noise_channel(epsilon):
     return lambda rho: y_noise_channel(rho=rho, epsilon=epsilon)
@@ -52,13 +69,14 @@ def is_sourceevent_between_stations(event, station1, station2):
 
 
 class ManylinkProtocol(Protocol):
-    def __init__(self, world, stations, sources, num_memories=2, lowest_level_epp_steps=1, measure_asap=True, communication_speed=C):
+    def __init__(self, world, stations, sources, num_memories=2, lowest_level_epp_steps=1, measure_asap=True, communication_speed=C, epp_protocol="dejmps"):
         self.stations = stations
         self.sources = sources
         self.num_memories = num_memories
         self.communication_speed = communication_speed
         self.lowest_level_epp_steps = lowest_level_epp_steps
         self.measure_asap = measure_asap
+        self.epp_protocol = epp_protocol
         self.time_list = []
         self.state_list = []
         self.scheduled_swappings = defaultdict(lambda: [])
@@ -255,11 +273,11 @@ class ManylinkProtocol(Protocol):
             # find purifiable pairs at same recurrence level
             for steps, pairs in staged_pairs.items():
                 if len(pairs) >= 2 and steps < self.lowest_level_epp_steps:
-                    communcation_time = distance(self.stations[station_index - 1], station) / self.communication_speed
+                    communication_time = distance(self.stations[station_index - 1], station) / self.communication_speed
                     epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
                                                               pairs=pairs[0:2],
-                                                              protocol="dejmps",
-                                                              communication_time=communcation_time)
+                                                              protocol=self.epp_protocol,
+                                                              communication_time=communication_time)
                     self.world.event_queue.add_event(epp_event)
         if num_right_pairs >= 2 and not self._epp_is_scheduled((self.stations[station_index + 1], station)):
             # group pairs by epp step
@@ -271,11 +289,11 @@ class ManylinkProtocol(Protocol):
             # find purifiable pairs at same recurrence level
             for steps, pairs in staged_pairs.items():
                 if len(pairs) >= 2 and steps < self.lowest_level_epp_steps:
-                    communcation_time = distance(station, self.stations[station_index + 1]) / self.communication_speed
+                    communication_time = distance(station, self.stations[station_index + 1]) / self.communication_speed
                     epp_event = EntanglementPurificationEvent(time=self.world.event_queue.current_time,
                                                               pairs=pairs[0:2],
-                                                              protocol="dejmps",
-                                                              communication_time=communcation_time)
+                                                              protocol=self.epp_protocol,
+                                                              communication_time=communication_time)
                     self.world.event_queue.add_event(epp_event)
 
     def check(self, message=None):
@@ -357,7 +375,7 @@ class ManylinkProtocol(Protocol):
 
 def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, lowest_level_epp_steps=1, measure_asap=True):
     assert num_links % 2 == 0
-    allowed_params = ["P_LINK", "T_P", "E_MA", "P_D", "LAMBDA_BSM", "F_INIT", "T_DP"]
+    allowed_params = ["P_LINK", "T_DAMP", "E_MA", "P_D", "P_GATE", "F_INIT", "T_DP"]
     for key in params:
         if key not in allowed_params:
             warn(f"params[{key}] is not a supported parameter and will be ignored.")
@@ -366,24 +384,26 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     T_P = params.get("T_P", 0)  # preparation time
     E_MA = params.get("E_MA", 0)  # misalignment error
     P_D = params.get("P_D", 0)  # dark count probability
-    LAMBDA_BSM = params.get("LAMBDA_BSM", 1)  # Bell state measurement ideality parameter
+    P_GATE = params.get("P_GATE", 1)  # two-gate noise parameter
     F_INIT = params.get("F_INIT", 1.0)  # initial fidelity of created pairs
     try:
-        T_DP = params["T_DP"]  # dephasing time
+        T_DAMP = params["T_DAMP"]  # amplitude dampening channel time
     except KeyError as e:
         raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
 
     def imperfect_bsm_err_func(four_qubit_state):
-        return LAMBDA_BSM * four_qubit_state + (1 - LAMBDA_BSM) * mat.reorder(mat.tensor(mat.ptrace(four_qubit_state, [1, 2]), mat.I(4) / 4), [0, 2, 3, 1])
+        rho = mat.wnoise(rho=four_qubit_state, n=1, p=P_GATE)
+        rho = mat.wnoise(rho=rho, n=2, p=P_GATE)
+        return rho
 
     def time_distribution(source):
         comm_distance = np.max([np.abs(source.position - source.target_stations[0].position), np.abs(source.position - source.target_stations[1].position)])
         comm_time = 2 * comm_distance / C
         eta = P_LINK * np.exp(-comm_distance / L_ATT)
         eta_effective = 1 - (1 - eta) * (1 - P_D)**2
-        trial_time = T_P + comm_time  # I don't think that paper uses latency time and loading time?
+        trial_time = T_P + comm_time
         random_num = np.random.geometric(eta_effective)
-        return random_num * trial_time#, random_num
+        return random_num * trial_time
 
     @lru_cache()
     def state_generation(source):
@@ -408,7 +428,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     else:
         misalignment_noise = None
 
-    if LAMBDA_BSM != 1:
+    if P_GATE != 1:
         bsm_noise_channel = NoiseChannel(n_qubits=4, channel_function=imperfect_bsm_err_func)
     else:
         bsm_noise_channel = None
@@ -416,14 +436,8 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
     world = World()
-    if lowest_level_epp_steps == 0 and measure_asap is True:
-        def end_station_noise():
-            return None
-    else:
-        def end_station_noise():
-            return construct_dephasing_noise_channel(dephasing_time=T_DP)
     world.event_queue = EventQueue()
-    station_A = Station(world, position=station_positions[0], memory_noise=end_station_noise(),
+    station_A = Station(world, position=station_positions[0], memory_noise=None,
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
@@ -434,7 +448,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
                               )
                       for pos in station_positions[1:-1]
                       ]
-    station_B = Station(world, position=station_positions[-1], memory_noise=end_station_noise(),
+    station_B = Station(world, position=station_positions[-1], memory_noise=None,
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
@@ -469,28 +483,29 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
 
 
 if __name__ == "__main__":
-    from time import time
-    np.random.seed(8154242)
-    max_iter = 20
-    # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
-    x = [2, 4, 8, 16, 32, 64, 128]
-    y = []
-    for num_links in x:
-        # print(num_links)
-        start_time = time()
-        res = run(length=300000, max_iter=max_iter,
-                  params={"T_DP": 25, "F_INIT": 0.95},
-                  num_links=num_links, num_memories=4,
-                  lowest_level_epp_steps=2)
-        # print(res.data)
-        # print(f"{num_links=} took {time() - start_time} seconds.")
-        time_interval = (time() - start_time) / max_iter
-        y += [time_interval]
-        print(num_links, f"{time_interval:.3f}")
-    import matplotlib.pyplot as plt
-    plt.plot(x, y)
-    plt.xlabel("num_links")
-    plt.ylabel("time [s]")
-    plt.yscale("log")
-    plt.grid()
-    plt.show()
+    pass
+    # from time import time
+    # np.random.seed(8154242)
+    # max_iter = 20
+    # # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
+    # x = [2, 4, 8, 16, 32, 64, 128]
+    # y = []
+    # for num_links in x:
+    #     # print(num_links)
+    #     start_time = time()
+    #     res = run(length=300000, max_iter=max_iter,
+    #               params={"T_DP": 25, "F_INIT": 0.95},
+    #               num_links=num_links, num_memories=4,
+    #               lowest_level_epp_steps=2)
+    #     # print(res.data)
+    #     # print(f"{num_links=} took {time() - start_time} seconds.")
+    #     time_interval = (time() - start_time) / max_iter
+    #     y += [time_interval]
+    #     print(num_links, f"{time_interval:.3f}")
+    # import matplotlib.pyplot as plt
+    # plt.plot(x, y)
+    # plt.xlabel("num_links")
+    # plt.ylabel("time [s]")
+    # plt.yscale("log")
+    # plt.grid()
+    # plt.show()
