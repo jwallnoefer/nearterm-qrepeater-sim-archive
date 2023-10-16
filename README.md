@@ -20,13 +20,16 @@ a circumstance which can only be described as _historically grown_ at the best o
 
 The following scenarios are included:
 
-| scenario name | description                              |
-| :-----------: | -----------------------------------------|
-| twolink_epp   | Two repeater links with multiple memories and a protocol that can, optionally, perform a number of entanglement purification steps before swapping. |
-| manylink      | Variable number repeater links always using entanglement swapping as early as possible. |
-| manylink_epp  | Variable number of repeater links with multiple memories and an adjustable number of entanglement purification steps at the lowest level. |
+| scenario name | description                                                                                                                                         |
+|:-------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+|  twolink_epp  | Two repeater links with multiple memories and a protocol that can, optionally, perform a number of entanglement purification steps before swapping. |
+|   manylink    | Variable number repeater links always using entanglement swapping as early as possible.                                                             |
+| manylink_epp  | Variable number of repeater links with multiple memories and an adjustable number of entanglement purification steps at the lowest level.           |
+|  many_params  | A variant of manylink_epp with an alternative error model (amplitude damping in memories and noisy two-qubit gates).                                |
+
 
 Furthermore, there are also some scenarios that have known, analytical results for key rates. We used our simulation to re-obtain them numerically:
+
 | scenario name | description                              |
 | :-----------: | -----------------------------------------|
 | luetkenhaus   | Two repeater links with a comprehensive noise model in [1] |
