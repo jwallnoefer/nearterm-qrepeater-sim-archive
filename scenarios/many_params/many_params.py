@@ -5,7 +5,13 @@ varied set of noise models.
 """
 
 
-import os, sys; sys.path.insert(0, os.path.abspath("."))
+import os, sys;
+
+from requsim.tools.evaluation import standard_bipartite_evaluation
+
+from requsim.libs.epp import dejmps_protocol
+
+sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
 from functools import lru_cache
@@ -26,14 +32,14 @@ import requsim.libs.matrix as mat
 from requsim.tools.noise_channels import y_noise_channel, z_noise_channel, w_noise_channel
 
 
-def construct_dephasing_noise_channel(dephasing_time):
-    def lambda_dp(t):
-        return (1 - np.exp(-t / dephasing_time)) / 2
-
-    def dephasing_noise_channel(rho, t):
-        return z_noise_channel(rho=rho, epsilon=lambda_dp(t))
-
-    return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_channel)
+# def construct_dephasing_noise_channel(dephasing_time):
+#     def lambda_dp(t):
+#         return (1 - np.exp(-t / dephasing_time)) / 2
+#
+#     def dephasing_noise_channel(rho, t):
+#         return z_noise_channel(rho=rho, epsilon=lambda_dp(t))
+#
+#     return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_channel)
 
 def construct_amplitude_damping_noise_channel(damping_parameter):
     def gamma(t):
@@ -41,7 +47,7 @@ def construct_amplitude_damping_noise_channel(damping_parameter):
 
     def amplitude_damping_noise_channel(rho, t):
         K0 = np.array([[1, 0], [0, np.sqrt(1 - gamma(t))]], dtype=complex)
-        K1 = np.array([[0, np.sqrt(gamma(t))], [0, 0]], dtype=complex])
+        K1 = np.array([[0, np.sqrt(gamma(t))], [0, 0]], dtype=complex)
         return K0 @ rho @ mat.H(K0) + K1 @ rho @ mat.H(K1)
 
     return NoiseChannel(n_qubits=1, channel_function=amplitude_damping_noise_channel)
@@ -66,6 +72,15 @@ def is_event_swapping_pairs(event, pair1, pair2):
 @lru_cache(maxsize=int(1e6))
 def is_sourceevent_between_stations(event, station1, station2):
     return isinstance(event, SourceEvent) and (station1 in event.source.target_stations) and (station2 in event.source.target_stations)
+
+
+def construct_noisy_gate_dejmps(p_gate):
+    # rho is four qubit state
+    def noisy_dejmps(rho):
+        rho = mat.wnoise_all(rho, p=p_gate)
+        return dejmps_protocol(rho)
+
+    return noisy_dejmps
 
 
 class ManylinkProtocol(Protocol):
@@ -375,7 +390,7 @@ class ManylinkProtocol(Protocol):
 
 def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, lowest_level_epp_steps=1, measure_asap=True):
     assert num_links % 2 == 0
-    allowed_params = ["P_LINK", "T_DAMP", "E_MA", "P_D", "P_GATE", "F_INIT", "T_DP"]
+    allowed_params = ["P_LINK", "T_DAMP", "E_MA", "P_D", "P_GATE", "F_INIT"]
     for key in params:
         if key not in allowed_params:
             warn(f"params[{key}] is not a supported parameter and will be ignored.")
@@ -389,7 +404,7 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     try:
         T_DAMP = params["T_DAMP"]  # amplitude dampening channel time
     except KeyError as e:
-        raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
+        raise Exception('params["T_DAMP"] is a mandatory argument').with_traceback(e.__traceback__)
 
     def imperfect_bsm_err_func(four_qubit_state):
         rho = mat.wnoise(rho=four_qubit_state, n=1, p=P_GATE)
@@ -433,22 +448,30 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
     else:
         bsm_noise_channel = None
 
+    if lowest_level_epp_steps == 0 and measure_asap is True:
+        def end_station_noise():
+            return None
+    else:
+        def end_station_noise():
+            return construct_amplitude_damping_noise_channel(damping_parameter=T_DAMP)
+
+
     station_positions = [x * length / num_links for x in range(num_links + 1)]
 
     world = World()
     world.event_queue = EventQueue()
-    station_A = Station(world, position=station_positions[0], memory_noise=None,
+    station_A = Station(world, position=station_positions[0], memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
     other_stations = [Station(world, position=pos,
-                              memory_noise=construct_dephasing_noise_channel(dephasing_time=T_DP),
+                              memory_noise=construct_amplitude_damping_noise_channel(damping_parameter=T_DAMP),
                               memory_cutoff_time=cutoff_time,
                               BSM_noise_model=NoiseModel(channel_before=bsm_noise_channel)
                               )
                       for pos in station_positions[1:-1]
                       ]
-    station_B = Station(world, position=station_positions[-1], memory_noise=None,
+    station_B = Station(world, position=station_positions[-1], memory_noise=end_station_noise(),
                         creation_noise_channel=misalignment_noise,
                         dark_count_probability=P_D
                         )
@@ -463,7 +486,8 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
                     ]
     protocol = ManylinkProtocol(world, stations, sources, num_memories=num_memories,
                                 lowest_level_epp_steps=lowest_level_epp_steps,
-                                measure_asap=measure_asap, communication_speed=C)
+                                measure_asap=measure_asap, communication_speed=C,
+                                epp_protocol=construct_noisy_gate_dejmps(p_gate=P_GATE))
     protocol.setup()
 
     # from code import interact
@@ -483,10 +507,41 @@ def run(length, max_iter, params, num_links, cutoff_time=None, num_memories=2, l
 
 
 if __name__ == "__main__":
-    pass
-    # from time import time
-    # np.random.seed(8154242)
-    # max_iter = 20
+    from time import time
+    np.random.seed(8154242)
+    max_iter = 1000
+    # params = {
+    #     "P_LINK": 0.01,
+    #     "T_DAMP": 100e-3,
+    #     "E_MA": 0.01,
+    #     "P_D": 1e-6,
+    #     "P_GATE": 0.99,
+    #     "F_INIT": 0.99
+    # }
+    params = {
+        "P_LINK": 0.01,
+        "T_DAMP": 1,
+        "E_MA": 0,
+        "P_D": 1e-6,
+        "P_GATE": 0.99,
+        "F_INIT": 0.99
+    }
+    res = run(length=100e3, max_iter=max_iter, params=params, num_links=8, num_memories=8, lowest_level_epp_steps=1)
+    print(res.data)
+    x = np.linspace(10, 50e3, num=10)
+    y = np.zeros_like(x, dtype=float)
+    for i, length in enumerate(x):
+        print(i)
+        start_time = time()
+        res = run(length=length, max_iter=max_iter, params=params, num_links=4, num_memories=2, lowest_level_epp_steps=1)
+        y[i] = standard_bipartite_evaluation(res.data)[2]
+        print(f"Took {time()-start_time:.2f} seconds.")
+    import matplotlib.pyplot as plt
+    plt.plot(x, y)
+    plt.yscale("log")
+    plt.grid()
+    plt.show()
+
     # # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
     # x = [2, 4, 8, 16, 32, 64, 128]
     # y = []
