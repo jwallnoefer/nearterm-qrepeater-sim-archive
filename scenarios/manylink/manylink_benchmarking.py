@@ -42,12 +42,12 @@ def alpha_of_eta(eta, p_d):
     return eta * (1 - p_d) / (1 - (1 - eta) * (1 - p_d)**2)
 
 
-@lru_cache(maxsize=int(1e6))
+@lru_cache(maxsize=int(5e4))
 def is_event_swapping_pairs(event, pair1, pair2):
     return isinstance(event, EntanglementSwappingEvent) and (pair1 in event.pairs) and (pair2 in event.pairs)
 
 
-@lru_cache(maxsize=int(1e6))
+@lru_cache(maxsize=int(5e4))
 def is_sourceevent_between_stations(event, station1, station2):
     return isinstance(event, SourceEvent) and (station1 in event.source.target_stations) and (station2 in event.source.target_stations)
 
