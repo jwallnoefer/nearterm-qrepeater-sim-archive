@@ -341,33 +341,44 @@ def run(length, max_iter, params, num_links, protocol_class):
 
 
 if __name__ == "__main__":
-    from time import time
-    max_iter = 10
-    # x = np.linspace(0, 1024, num=64 + 1, dtype=int)[1:]
-    x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
-    y1 = []
-    y2 = []
-    for num_links in x:
-        start_time = time()
-        res = run(length=22000, max_iter=max_iter,
-                  params={"T_DP": 25, "F_INIT": 0.95},
-                  num_links=num_links, protocol_class=DefaultManylinkProtocol)
-        time_interval = (time() - start_time) / max_iter
-        y1 += [time_interval]
-        print(num_links, f"{time_interval:.2f}")
-    for num_links in x:
-        start_time = time()
-        res = run(length=22000, max_iter=max_iter,
-                  params={"T_DP": 25, "F_INIT": 0.95},
-                  num_links=num_links, protocol_class=CustomManylinkProtocol)
-        time_interval = (time() - start_time) / max_iter
-        y2 += [time_interval]
-        print(num_links, f"{time_interval:.2f}")
+    x = np.linspace(0, 1024, num=128 + 1, dtype=int)[1:]
+    # x = np.arange(128)
+    x1 = list(x[:64]) + list(x[65:])
+    y1 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "default_protocol", "times.txt"))
+    y2 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "custom_protocol", "times.txt"))
     import matplotlib.pyplot as plt
-    plt.plot(x, y1, label="default")
-    plt.plot(x, y2, label="custom")
-    plt.xlabel("num_links")
-    plt.ylabel("time [s]")
-    # plt.yscale("log")
-    plt.grid()
+    plt.scatter(x1, y1 / 10000, s=8)
+    plt.scatter(x, y2 / 10000, s=8)
+    plt.ylabel("Run time per distributed pair [s]")
+    plt.xlabel("Number of repeater links")
     plt.show()
+    # from time import time
+    # max_iter = 10
+    # # x = np.linspace(0, 1024, num=64 + 1, dtype=int)[1:]
+    # x = np.linspace(0, 1024, num=8 + 1, dtype=int)[1:]
+    # y1 = []
+    # y2 = []
+    # for num_links in x:
+    #     start_time = time()
+    #     res = run(length=22000, max_iter=max_iter,
+    #               params={"T_DP": 25, "F_INIT": 0.95},
+    #               num_links=num_links, protocol_class=DefaultManylinkProtocol)
+    #     time_interval = (time() - start_time) / max_iter
+    #     y1 += [time_interval]
+    #     print(num_links, f"{time_interval:.2f}")
+    # for num_links in x:
+    #     start_time = time()
+    #     res = run(length=22000, max_iter=max_iter,
+    #               params={"T_DP": 25, "F_INIT": 0.95},
+    #               num_links=num_links, protocol_class=CustomManylinkProtocol)
+    #     time_interval = (time() - start_time) / max_iter
+    #     y2 += [time_interval]
+    #     print(num_links, f"{time_interval:.2f}")
+    # import matplotlib.pyplot as plt
+    # plt.plot(x, y1, label="default")
+    # plt.plot(x, y2, label="custom")
+    # plt.xlabel("num_links")
+    # plt.ylabel("time [s]")
+    # # plt.yscale("log")
+    # plt.grid()
+    # plt.show()

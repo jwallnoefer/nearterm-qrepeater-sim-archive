@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Pipenv (simulating_nearterm_archive)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Pipenv (simulating_nearterm_archive)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Pipenv (nearterm-qrepeater-sim-archive)" project-jdk-type="Python SDK" />
 </project>
