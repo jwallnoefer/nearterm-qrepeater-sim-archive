@@ -341,14 +341,16 @@ def run(length, max_iter, params, num_links, protocol_class):
 
 
 if __name__ == "__main__":
-    x = np.linspace(0, 1024, num=128 + 1, dtype=int)[1:]
-    # x = np.arange(128)
+    # x = np.linspace(0, 1024, num=128 + 1, dtype=int)[1:]
+    x = np.arange(128)
     x1 = list(x[:64]) + list(x[65:])
     y1 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "default_protocol", "times.txt"))
     y2 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "custom_protocol", "times.txt"))
+    y3 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "custom_protocol_2", "times.txt"))
     import matplotlib.pyplot as plt
     plt.scatter(x1, y1 / 10000, s=8)
     plt.scatter(x, y2 / 10000, s=8)
+    plt.scatter(x, y3 / 10000, s=8)
     plt.ylabel("Run time per distributed pair [s]")
     plt.xlabel("Number of repeater links")
     plt.show()
