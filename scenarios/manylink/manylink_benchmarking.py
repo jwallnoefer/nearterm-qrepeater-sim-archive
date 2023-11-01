@@ -1,19 +1,23 @@
 """A simplified scenario with only very basic parameters."""
-import os, sys; sys.path.insert(0, os.path.abspath("."))
+import os, sys;
+from abc import abstractmethod
+
+sys.path.insert(0, os.path.abspath("."))
 import numpy as np
 import pandas as pd
 from functools import lru_cache
-from world import World
-from quantum_objects import Station, SchedulingSource
-from events import SourceEvent, EntanglementSwappingEvent
-from noise import NoiseModel, NoiseChannel
-from protocol import MessageReadingProtocol
+from requsim.world import World
+from requsim.quantum_objects import Station, SchedulingSource
+from requsim.events import SourceEvent, EntanglementSwappingEvent
+from requsim.noise import NoiseModel, NoiseChannel
+from requsim.tools.protocol import Protocol
 from consts import SPEED_OF_LIGHT_IN_OPTICAL_FIBER as C
 from consts import ATTENUATION_LENGTH_IN_OPTICAL_FIBER as L_ATT
 from collections import defaultdict
 from warnings import warn
-from libs.aux_functions import apply_single_qubit_map, y_noise_channel, z_noise_channel, w_noise_channel, distance
-import libs.matrix as mat
+from requsim.libs.aux_functions import apply_single_qubit_map, distance
+from requsim.tools.noise_channels import y_noise_channel, z_noise_channel, w_noise_channel
+import requsim.libs.matrix as mat
 
 
 def construct_dephasing_noise_channel(dephasing_time):
@@ -23,7 +27,7 @@ def construct_dephasing_noise_channel(dephasing_time):
     def dephasing_noise_channel(rho, t):
         return z_noise_channel(rho=rho, epsilon=lambda_dp(t))
 
-    return dephasing_noise_channel
+    return NoiseChannel(n_qubits=1, channel_function=dephasing_noise_channel)
 
 
 def construct_y_noise_channel(epsilon):
@@ -38,17 +42,17 @@ def alpha_of_eta(eta, p_d):
     return eta * (1 - p_d) / (1 - (1 - eta) * (1 - p_d)**2)
 
 
-@lru_cache(maxsize=int(1e6))
+@lru_cache(maxsize=int(5e4))
 def is_event_swapping_pairs(event, pair1, pair2):
     return isinstance(event, EntanglementSwappingEvent) and (pair1 in event.pairs) and (pair2 in event.pairs)
 
 
-@lru_cache(maxsize=int(1e6))
+@lru_cache(maxsize=int(5e4))
 def is_sourceevent_between_stations(event, station1, station2):
     return isinstance(event, SourceEvent) and (station1 in event.source.target_stations) and (station2 in event.source.target_stations)
 
 
-class ManylinkProtocol(MessageReadingProtocol):
+class BaseManylinkProtocol(Protocol):
     def __init__(self, world, stations, sources, num_memories=1, communication_speed=C):
         self.stations = stations
         self.sources = sources
@@ -56,12 +60,8 @@ class ManylinkProtocol(MessageReadingProtocol):
         self.communication_speed = communication_speed
         self.time_list = []
         self.state_list = []
-        self.resource_cost_max_list = []
-        self.resource_cost_add_list = []
         self.scheduled_swappings = defaultdict(lambda: [])
-        self.step = 0
-        self.counter = 0
-        super(ManylinkProtocol, self).__init__(world=world)
+        super(BaseManylinkProtocol, self).__init__(world=world)
 
     def setup(self):
         # Station ordering left to right
@@ -81,9 +81,7 @@ class ManylinkProtocol(MessageReadingProtocol):
 
     @property
     def data(self):
-        return pd.DataFrame({"time": self.time_list, "state": self.state_list,
-                             "resource_cost_max": self.resource_cost_max_list,
-                             "resource_cost_add": self.resource_cost_add_list})
+        return pd.DataFrame({"time": self.time_list, "state": self.state_list})
 
     def _get_pairs_between_stations(self, station1, station2):
         try:
@@ -104,8 +102,6 @@ class ManylinkProtocol(MessageReadingProtocol):
 
         self.time_list += [self.world.event_queue.current_time + comm_time]
         self.state_list += [long_range_pair.state]
-        self.resource_cost_max_list += [long_range_pair.resource_cost_max]
-        self.resource_cost_add_list += [long_range_pair.resource_cost_add]
         return
 
     def pairs_at_station(self, station):
@@ -113,11 +109,11 @@ class ManylinkProtocol(MessageReadingProtocol):
         pairs_left = []
         pairs_right = []
         for qubit in station.qubits:
-            pair = qubit.pair
+            pair = qubit.higher_order_object
             qubit_list = list(pair.qubits)
             qubit_list.remove(qubit)
             qubit_neighbor = qubit_list[0]
-            if self.stations.index(qubit_neighbor.station) < station_index:
+            if self.stations.index(qubit_neighbor._info["station"]) < station_index:
                 pairs_left += [pair]
             else:
                 pairs_right += [pair]
@@ -141,13 +137,13 @@ class ManylinkProtocol(MessageReadingProtocol):
             last_pair = left_pairs[-1]
             last_pair.qubits[0].destroy()
             last_pair.qubits[1].destroy()
-            last_pair.destroy_and_track_resources()
+            last_pair.destroy()
             has_overflowed = True
         if len(right_pairs) > self.num_memories:
             last_pair = right_pairs[-1]
             last_pair.qubits[0].destroy()
             last_pair.qubits[1].destroy()
-            last_pair.destroy_and_track_resources()
+            last_pair.destroy()
             has_overflowed = True
         return has_overflowed
 
@@ -166,16 +162,21 @@ class ManylinkProtocol(MessageReadingProtocol):
         num_swappings = min(len(left_pairs), len(right_pairs))
         if num_swappings:
             # get rid of events that are no longer scheduled
-            self.scheduled_swappings[station] = [event for event in self.scheduled_swappings[station] if event in self.world.event_queue.queue]
+            self.scheduled_swappings[station] = [event for event in self.scheduled_swappings[station] if
+                                                 event in self.world.event_queue.queue]
         for left_pair, right_pair in zip(left_pairs[:num_swappings], right_pairs[:num_swappings]):
             # assert that we do not schedule the same swapping more than once
             try:
-                next(filter(lambda event: is_event_swapping_pairs(event, left_pair, right_pair), self.scheduled_swappings[station]))
+                next(filter(lambda event: is_event_swapping_pairs(event, left_pair, right_pair),
+                            self.scheduled_swappings[station]))
                 is_already_scheduled = True
             except StopIteration:
                 is_already_scheduled = False
             if not is_already_scheduled:
-                ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time, pairs=[left_pair, right_pair])
+                ent_swap_event = EntanglementSwappingEvent(time=self.world.event_queue.current_time,
+                                                           pairs=[left_pair, right_pair],
+                                                           station=station
+                                                           )
                 self.scheduled_swappings[station] += [ent_swap_event]
                 self.world.event_queue.add_event(ent_swap_event)
 
@@ -190,6 +191,57 @@ class ManylinkProtocol(MessageReadingProtocol):
                 long_range_pair.qubits[1].destroy()
                 long_range_pair.destroy()
             # self.check()  # was useful at some point for other scenarios
+
+    @abstractmethod
+    def check(self, message=None):
+        raise NotImplementedError
+
+
+class DefaultManylinkProtocol(BaseManylinkProtocol):
+    def check(self, message=None):
+        if message is None:
+            for station in self.stations:
+                self._check_station_overflow(station)
+            for station in self.stations:
+                self._check_new_source_events(station)
+            for station in self.stations:
+                self._check_swapping(station)
+            self._check_long_distance_pair()
+        elif message["event_type"] == "SourceEvent" and message["resolve_successful"] is True:
+            output_pair = message["output_pair"]
+            stations = [output_pair.qubit1._info["station"], output_pair.qubit2._info["station"]]
+            for station in stations:
+                has_overflowed = self._check_station_overflow(station)
+                if has_overflowed:
+                    self._check_new_source_events(station)
+                self._check_swapping(station)
+        elif message["event_type"] == "SourceEvent" and message["resolve_successful"] is False:
+            warn("A SourceEvent has resolved unsuccessfully. This should never happen.")
+        elif message["event_type"] == "DiscardQubitEvent" and message["resolve_successful"] is True:
+            discarded_qubit = message["qubit"]
+            self._check_new_source_events(discarded_qubit._info["station"])
+        elif message["event_type"] == "DiscardQubitEvent" and message["resolve_successful"] is False:
+            pass
+        elif message["event_type"] == "EntanglementSwappingEvent" and message["resolve_successful"] is True:
+            self._check_new_source_events(message["swapping_station"])
+            output_pair = message["output_pair"]
+            for station in [output_pair.qubit1._info["station"], output_pair.qubit2._info["station"]]:
+                self._check_swapping(station)
+            self._check_long_distance_pair()
+        elif message["event_type"] == "EntanglementSwappingEvent" and message["resolve_successful"] is False:
+            # warn("An EntanglementSwappingEvent has resolved unsuccessfully. Trying to recover.")
+            # for station in self.stations:
+            #     self._check_swapping(station)
+            pass
+        else:
+            warn(f"Unrecognized message type encountered: {message}")
+
+class CustomManylinkProtocol(BaseManylinkProtocol):
+    def __init__(self, world, stations, sources, num_memories=1, communication_speed=C):
+        self.step = 0
+        self.counter = 0
+        super(CustomManylinkProtocol, self).__init__(world=world, stations=stations, sources=sources, num_memories=num_memories, communication_speed=communication_speed)
+
 
     def check(self, message=None):
         if len(self.world.event_queue.queue) != 0:
@@ -210,9 +262,12 @@ class ManylinkProtocol(MessageReadingProtocol):
                 self.counter += 1
 
 
-def run(length, max_iter, params, num_links):
+def run(length, max_iter, params, num_links, protocol_class):
     assert num_links % 2 == 0
     allowed_params = ["F_INIT", "T_DP"]
+    P_LINK = 1
+    P_D = 0
+    T_P = 0
     for key in params:
         if key not in allowed_params:
             warn(f"params[{key}] is not a supported parameter and will be ignored.")
@@ -223,9 +278,15 @@ def run(length, max_iter, params, num_links):
     except KeyError as e:
         raise Exception('params["T_DP"] is a mandatory argument').with_traceback(e.__traceback__)
 
-    @lru_cache()
     def time_distribution(source):
-        return 1, 1
+        comm_distance = np.max([np.abs(source.position - source.target_stations[0].position),
+                                np.abs(source.position - source.target_stations[1].position)])
+        comm_time = 2 * comm_distance / C
+        eta = P_LINK * np.exp(-comm_distance / L_ATT)
+        eta_effective = 1 - (1 - eta) * (1 - P_D) ** 2
+        trial_time = T_P + comm_time  # I don't think that paper uses latency time and loading time?
+        random_num = np.random.geometric(eta_effective)
+        return random_num * trial_time
 
     @lru_cache()
     def state_generation(source):
@@ -261,7 +322,7 @@ def run(length, max_iter, params, num_links):
                                      time_distribution=time_distribution,
                                      state_generation=state_generation)
                     ]
-    protocol = ManylinkProtocol(world, stations, sources, num_memories=1, communication_speed=C)
+    protocol = protocol_class(world, stations, sources, num_memories=1, communication_speed=C)
     protocol.setup()
 
     # from code import interact
@@ -280,24 +341,23 @@ def run(length, max_iter, params, num_links):
 
 
 if __name__ == "__main__":
-    from time import time
-    max_iter = 10
-    x = np.linspace(0, 1024, num=64 + 1, dtype=int)[1:]
-    y = []
-    for num_links in x:
-        print(num_links)
-        start_time = time()
-        res = run(length=22000, max_iter=max_iter,
-                  params={"T_DP": 25, "F_INIT": 0.95},
-                  num_links=num_links)
-        # print(res.data)
-        # print(f"{num_links=} took {time() - start_time} seconds.")
-        time_interval = (time() - start_time) / max_iter
-        y += [time_interval]
+    import matplotlib as mpl
     import matplotlib.pyplot as plt
-    plt.plot(x, y)
-    plt.xlabel("num_links")
-    plt.ylabel("time [s]")
-    # plt.yscale("log")
+    # colorblind friendly color set taken from https://personal.sron.nl/~pault/
+    colors = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB']
+    # make them the standard colors for matplotlib
+    mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
+    color_list = colors
+
+    num_parts = 64
+    max_iter = 4000
+    x = np.linspace(0, 1024, num=num_parts + 1, dtype=int)[1:]
+    y1 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "default_protocol", "times.txt"))
+    y2 = np.loadtxt(os.path.join("results", "manylink_benchmarking", "custom_protocol", "times.txt"))
+
+    plt.scatter(x, y1 / max_iter, s=8)
+    plt.scatter(x, y2 / max_iter, s=8)
+    plt.ylabel("Run time per distributed pair [s]")
+    plt.xlabel("Number of repeater links")
     plt.grid()
-    plt.show()
+    plt.savefig(os.path.join("results", "manylink_benchmarking", "simple_benchmark.pdf"))
