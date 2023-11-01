@@ -12,9 +12,9 @@ cases = {}
 
 case_name = "simple_benchmark"
 base_params = {"T_DP": 25, "F_INIT": 0.95}
-num_parts = 128
+num_parts = 64
 num_links = np.linspace(0, 1024, num=num_parts + 1, dtype=int)[1:]
-max_iter = 10000
+max_iter = 4000
 length = 22000
 # default protocol case
 case_specification = {
